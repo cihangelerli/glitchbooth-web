@@ -1,23 +1,33 @@
-import { useEffect, useState, useRef } from 'react';
-import { Cpu, Server, Globe2, CheckCircle, Terminal } from 'lucide-react';
-import { motion, useInView } from 'motion/react';
+import { useEffect, useState, useRef } from "react";
+import { Cpu, Server, Globe2, CheckCircle, Terminal } from "lucide-react";
+import { motion, useInView } from "motion/react";
 
 export default function Specs() {
   const containerRef = useRef(null);
   const isInView = useInView(containerRef, { once: true, amount: 0.2 });
 
   const initialConsoleLines = [
-    { text: 'Initializing GLITCH_BOOTH system...', delay: 0 },
-    { text: 'Loading visual shaders: OK', delay: 150 },
-    { text: 'CRT emulation layer: OK', delay: 350 },
-    { text: 'Scanline synchronization: OK', delay: 550 },
-    { text: 'Neural glitch network: CONNECTED', delay: 800, status: 'CONNECTED' },
-    { text: 'Buffer overflow prevention: DISABLED', delay: 1100, status: 'WARN' },
-    { text: 'Finalizing interface...', delay: 1350 },
-    { text: 'BOOT_SEQUENCE_COMPLETE', delay: 1600, status: 'SUCCESS' },
+    { text: "Initializing GLITCH_BOOTH system...", delay: 0 },
+    { text: "Loading effects: OK", delay: 150 },
+    { text: "Camera layer: OK", delay: 350 },
+    { text: "Knobs synchronization: OK", delay: 550 },
+    {
+      text: "Glitch Capture Network: CONNECTED",
+      delay: 800,
+      status: "CONNECTED",
+    },
+    {
+      text: "Buffer overflow prevention: DISABLED",
+      delay: 1100,
+      status: "WARN",
+    },
+    { text: "Finalizing interface...", delay: 1350 },
+    { text: "BOOT_SEQUENCE_COMPLETE", delay: 1600, status: "SUCCESS" },
   ];
 
-  const [activeLines, setActiveLines] = useState<typeof initialConsoleLines>([]);
+  const [activeLines, setActiveLines] = useState<typeof initialConsoleLines>(
+    [],
+  );
 
   // Trigger loading lines only when visible on screen
   useEffect(() => {
@@ -31,8 +41,8 @@ export default function Specs() {
   }, [isInView]);
 
   return (
-    <section 
-      id="about-section" 
+    <section
+      id="about-section"
       ref={containerRef}
       className="relative w-full max-w-[1200px] mx-auto px-4 py-16 md:py-24 grid-brutalist border-t border-matrix/20 text-left select-none"
     >
@@ -47,7 +57,6 @@ export default function Specs() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-        
         {/* Left Side: Spec Details & Status Block */}
         <div className="space-y-8">
           {/* HARDWARE CORE */}
@@ -56,27 +65,33 @@ export default function Specs() {
               <span>&gt; HARDWARE_CORE</span>
             </h3>
             <p className="font-mono text-xs sm:text-sm text-[#b9ccb2] leading-relaxed">
-              Driven by a high-performance Raspberry Pi cluster, custom-tuned for real-time image processing and low-latency digital artifacting.
+              Bare-metal input modules process raw sensor data and custom logic
+              controlled by user manipulates visuals pre-capture at the precise
+              amount of physical exposure to the glitch pipeline.
             </p>
           </div>
 
           {/* STORAGE PIPELINE */}
           <div className="border-l-2 border-[#00ff41] pl-4 space-y-2">
             <h3 className="font-display text-xs sm:text-sm font-bold text-[#00ff41] tracking-wider flex items-center space-x-2">
-              <span>&gt; STORAGE_PIPELINE</span>
+              <span>&gt; THERMAL_STORAGE_PIPELINE</span>
             </h3>
             <p className="font-mono text-xs sm:text-sm text-[#b9ccb2] leading-relaxed">
-              ImageKit integration provides seamless cloud-optimized delivery with dynamic glitch transformations applied on-the-fly.
+              Each digital capture is translated into a raw, analog thermal
+              receipt print—creating a low-fi, physical urban artifact you can
+              hold in your hand.
             </p>
           </div>
 
           {/* DEPLOYMENT EDGE */}
           <div className="border-l-2 border-[#00ff41] pl-4 space-y-2">
             <h3 className="font-display text-xs sm:text-sm font-bold text-[#00ff41] tracking-wider flex items-center space-x-2">
-              <span>&gt; DEPLOYMENT_EDGE</span>
+              <span>&gt; THE_DIGITAL_PHYSICAL_BRIDGE</span>
             </h3>
             <p className="font-mono text-xs sm:text-sm text-[#b9ccb2] leading-relaxed">
-              Hosted on Vercel's Edge Network for global availability, ensuring the booth stays online even during peak traffic spikes.
+              Every physical print includes a direct token link. Scanning it
+              instantly hooks you back into the digital archive gallery to view,
+              inspect, or download the original high-contrast capture.
             </p>
           </div>
 
@@ -109,15 +124,13 @@ export default function Specs() {
 
         {/* Right Side: Boot Terminal Window & About Paragraph */}
         <div className="space-y-8">
-          
           {/* CRT emulator terminal window */}
           <div className="bg-black border-2 border-[#3b4b37]/80 overflow-hidden shadow-2xl relative">
-            
             {/* Terminal Header Bar */}
             <div className="bg-[#1b1b1b] border-b-2 border-[#3b4b37]/80 px-4 py-2 flex items-center justify-between font-mono text-[10px] md:text-xs">
               <span className="text-[#00ff41] font-bold flex items-center space-x-2">
                 <Terminal size={14} className="text-[#00ff41] animate-pulse" />
-                <span>C:\NMPREM\INFE\BEEPRG.EXE</span>
+                <span>~\GLITCH_BOOTH\SERVER.PY</span>
               </span>
               <div className="flex space-x-1.5">
                 <div className="w-2.5 h-2.5 bg-matrix/23" />
@@ -127,27 +140,31 @@ export default function Specs() {
 
             {/* Terminal Console Log Output */}
             <div className="p-4 md:p-6 font-mono text-xs text-[#00ff41] space-y-2 min-h-[220px] bg-gradient-to-b from-[#0a0a0a] to-[#040404]">
-              
               {/* Scanline line overlay inside prompt */}
               <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,255,65,0.06)_50%)] bg-[size:100%_4px] pointer-events-none z-1" />
 
               {/* Streaming lines */}
               {activeLines.map((line, idx) => {
-                const timestamp = `[0.${String(idx * 142).padStart(3, '0')}]`;
-                
-                let valColor = 'text-[#00ff41]';
-                if (line.status === 'CONNECTED') valColor = 'text-[#00daf8] glow-text-cyber';
-                if (line.status === 'WARN') valColor = 'text-magenta font-semibold glow-text-magenta';
-                if (line.status === 'SUCCESS') valColor = 'text-black bg-[#00ff41] px-1 font-bold';
+                const timestamp = `[0.${String(idx * 142).padStart(3, "0")}]`;
+
+                let valColor = "text-[#00ff41]";
+                if (line.status === "CONNECTED")
+                  valColor = "text-[#00daf8] glow-text-cyber";
+                if (line.status === "WARN")
+                  valColor = "text-magenta font-semibold glow-text-magenta";
+                if (line.status === "SUCCESS")
+                  valColor = "text-black bg-[#00ff41] px-1 font-bold";
 
                 return (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, x: -3 }}
                     animate={{ opacity: 1, x: 0 }}
-                    key={idx} 
+                    key={idx}
                     className="flex text-[11px] md:text-xs items-start leading-[1.4]"
                   >
-                    <span className="text-[#84967e] shrink-0 mr-3">{timestamp}</span>
+                    <span className="text-[#84967e] shrink-0 mr-3">
+                      {timestamp}
+                    </span>
                     <span className={`${valColor}`}>{line.text}</span>
                   </motion.div>
                 );
@@ -157,7 +174,9 @@ export default function Specs() {
               {isInView && (
                 <div className="flex items-center text-[11px] md:text-xs text-[#84967e] font-semibold pt-2">
                   <span className="mr-3">[LIVE]</span>
-                  <span className="text-[#00ff41]">root@glitch_booth:~$&nbsp;</span>
+                  <span className="text-[#00ff41]">
+                    root@glitch_booth:~$&nbsp;
+                  </span>
                   <span className="w-2 h-4 bg-[#00ff41] animate-[pulse_0.8s_infinite]" />
                 </div>
               )}
@@ -167,14 +186,16 @@ export default function Specs() {
           {/* ABOUT THE BOOTH text blocks exactly matching specs layout */}
           <div className="space-y-4">
             <h4 className="font-display text-[#00ff41] text-xs font-bold tracking-widest uppercase">
-              // ABOUT_THE_BOOTH
+              // ABOUT_GLITCHBOOTH
             </h4>
             <p className="font-mono text-xs sm:text-sm text-[#e2e2e2] leading-relaxed">
-              GLITCH_BOOTH is an experimental digital installation designed to explore the aesthetics of technology in states of distress. We don't just take photos; we document the digital ghost in the machine. Every image is unique, every distortion is calculated chaos.
+              GLITCH_BOOTH is an experimental digital installation designed to
+              explore the aesthetics of technology in states of distress.
+              Gitchbooth doesn't just take photos; it documents the digital
+              ghost in the machine in a little urban artifact...
             </p>
           </div>
         </div>
-
       </div>
     </section>
   );

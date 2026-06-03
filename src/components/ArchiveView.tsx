@@ -101,7 +101,7 @@ export default function ArchiveView({
         </div>
 
         {/* Filter buttons block */}
-        <div className="md:col-span-6 flex flex-wrap items-center md:justify-end gap-2 text-xs font-mono">
+        {/* <div className="md:col-span-6 flex flex-wrap items-center md:justify-end gap-2 text-xs font-mono">
           <div className="text-[10px] text-[#84967e] flex items-center space-x-1.5 mr-2">
             <SlidersHorizontal size={12} />
             <span>GLITCH_FILTER:</span>
@@ -126,7 +126,7 @@ export default function ArchiveView({
               {btn.label}
             </button>
           ))}
-        </div>
+        </div> */}
       </div>
 
       {/* Grid of pictures with high-contrast color restoration effect upon hover */}
@@ -169,7 +169,9 @@ export default function ArchiveView({
                   src={img.url}
                   alt={img.title}
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover transition-all duration-500 grayscale contrast-[1.95] group-hover:grayscale-0 group-hover:contrast-125"
+                  // Cleaned up classes: removed grayscale and extreme contrast shifts entirely.
+                  // Added a clean hover scale transition so it feels responsive without mutating capture colors.
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
 
                 {/* Glitch Overlay Indicator */}
@@ -177,9 +179,9 @@ export default function ArchiveView({
                   {img.filename}
                 </span>
 
-                <span className="absolute bottom-2 right-2 bg-black/80 text-magenta border border-magenta/20 px-1.5 py-0.5 font-mono text-[8px] tracking-wide z-10 font-bold">
+                {/* <span className="absolute bottom-2 right-2 bg-black/80 text-magenta border border-magenta/20 px-1.5 py-0.5 font-mono text-[8px] tracking-wide z-10 font-bold">
                   DECAY: {img.glitchLevel}%
-                </span>
+                </span> */}
               </div>
 
               {/* Photo Meta and Specs */}
@@ -191,7 +193,7 @@ export default function ArchiveView({
                   <span className="text-cyber text-[9px]">{img.shutter}</span>
                 </div>
                 <div className="flex justify-between text-[#84967e] text-[9px]">
-                  <span>{img.iso || "ISO 400"}</span>
+                  {/* <span>{img.iso || "ISO 400"}</span> */}
                   {/* Bulletproof safe-access for the timestamp splitter */}
                   <span>
                     {

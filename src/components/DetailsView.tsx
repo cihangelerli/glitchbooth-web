@@ -77,6 +77,31 @@ export default function DetailsView({
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [image]);
 
+  // Programmatic Blob download handler to force file downloading instead of opening a new tab
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(image.url);
+      const blob = await response.blob();
+      const localUrl = window.URL.createObjectURL(blob);
+
+      const downloadLink = document.createElement("a");
+      downloadLink.href = localUrl;
+      downloadLink.download = `${image.filename || image.id + ".jpg"}`;
+
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      window.URL.revokeObjectURL(localUrl);
+    } catch (err) {
+      console.error(
+        "Forced streaming failed, falling back to standard tab display:",
+        err,
+      );
+      window.open(image.url, "_blank", "noopener,noreferrer");
+    }
+  };
+
   const filePathStr = `~\\GLITCH_BOOTH\\CAPTURES\\${image.filename || image.id + ".JPG"}`;
 
   // Calculate timestamp dynamically based on the current ID
@@ -181,11 +206,9 @@ export default function DetailsView({
             </div>
           </div>
 
-          <a
-            href={image.url}
-            download={`${image.filename || image.id}.jpg`}
-            target="_blank"
-            rel="noopener noreferrer"
+          {/* Interactive Button calling handleDownload logic */}
+          <button
+            onClick={handleDownload}
             className="w-full bg-[#00e339] text-black font-extrabold text-sm tracking-widest py-4 flex items-center justify-center space-x-2 hover:bg-black hover:text-[#00e339] border border-[#00e339] transition-all duration-300 drop-shadow-[0_4px_10px_rgba(0,227,57,0.15)] cursor-pointer group"
             style={{ borderRadius: "0px" }}
           >
@@ -195,7 +218,7 @@ export default function DetailsView({
               strokeWidth={2.5}
             />
             <span>DOWNLOAD</span>
-          </a>
+          </button>
 
           <div className="space-y-3">
             <a

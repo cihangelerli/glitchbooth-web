@@ -6,23 +6,32 @@ import Specs from "./components/Specs";
 import ContactForm from "./components/ContactForm";
 import ArchiveView from "./components/ArchiveView";
 import DetailsView from "./components/DetailsView";
-import { STOCK_GALLERY_IMAGES, getRandomizedImages } from "./data/images";
+import { STOCK_GALLERY_IMAGES } from "./data/images";
 import { GalleryImage } from "./types";
 
 export default function App() {
-  // 1. Initialize with stock images as an immediate fallback baseline
-  const [imagesPool, setImagesPool] =
-    useState<GalleryImage[]>(STOCK_GALLERY_IMAGES);
+  const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
   const [currentView, setCurrentView] = useState<
     "home" | "archive" | "details"
   >("home");
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Keeps your original layout randomization function intact
+  // Shuffles your real live ImageKit images pool directly
   const handleRandomizeImages = () => {
-    const randomized = getRandomizedImages(imagesPool.length);
-    setImagesPool(randomized);
+    setImagesPool((prevImages) => {
+      // 1. Make a safe copy of your current images array
+      const shuffled = [...prevImages];
+
+      // 2. Scramble the order of the array mix randomly
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+
+      // 3. Save the scrambled live data back into the pool
+      return shuffled;
+    });
   };
 
   useEffect(() => {
@@ -62,16 +71,45 @@ export default function App() {
             setSelectedImage(existingMatch);
           } else {
             // Fallback: If it's a brand new capture, reconstruct the target frame schema dynamically
-            const deepLinkedImage: GalleryImage = {
+            //  CLEANED DYNAMIC FALLBACK
+            // 1. Clean off any format tags if present in the ID string
+            const cleanId = photoId.replace("_color", "");
+            let derivedTimestamp = "2026-06-03 00:00:00"; // Absolute fallback if parsing fails
+
+            if (/^\d+$/.test(cleanId)) {
+              // Format A: ID is Unix Epoch Milliseconds (e.g., 1780303090604)
+              const date = new Date(parseInt(cleanId, 10));
+              if (!isNaN(date.getTime())) {
+                const yyyy = date.getFullYear();
+                const mm = String(date.getMonth() + 1).padStart(2, "0");
+                const dd = String(date.getDate()).padStart(2, "0");
+                const hh = String(date.getHours()).padStart(2, "0");
+                const min = String(date.getMinutes()).padStart(2, "0");
+                const ss = String(date.getSeconds()).padStart(2, "0");
+                derivedTimestamp = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+              }
+            } else {
+              // Format B: ID is Legacy String (e.g., 20260603_173400)
+              const parts = cleanId.split("_");
+              if (
+                parts.length === 2 &&
+                parts[0].length === 8 &&
+                parts[1].length === 6
+              ) {
+                const d = parts[0]; // YYYYMMDD
+                const t = parts[1]; // HHMMSS
+                derivedTimestamp = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)} ${t.substring(0, 2)}:${t.substring(2, 4)}:${t.substring(4, 6)}`;
+              }
+            }
+
+            //  FIXED CODE
+            const deepLinkedImage = {
               id: photoId,
               url: `https://ik.imagekit.io/w6lsfsw8j/booth_captures/${photoId}_color.jpg`,
               filename: `${photoId}_color.jpg`,
               title: `CAPTURE_${photoId}`,
-              shutter: "1/60s",
-              iso: "ISO 400",
-              glitchLevel: Math.floor(Math.random() * 40) + 30, // simulated default display metrics
-              timestamp: "2026-06-03 17:34:00",
-            };
+              timestamp: derivedTimestamp,
+            } as GalleryImage;
             setSelectedImage(deepLinkedImage);
           }
 
@@ -219,9 +257,14 @@ export default function App() {
           <div className="text-center sm:text-right uppercase tracking-[0.1em]">
             <span>
               POWERED BY{" "}
-              <strong className="text-white hover:text-[#00ff41] transition-colors duration-300">
+              <a
+                href="https://dirtcakestudio.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white hover:text-[#00ff41] font-bold transition-colors duration-300 decoration-none"
+              >
                 DIRTCAKE STUDIO
-              </strong>
+              </a>
             </span>
           </div>
         </div>
