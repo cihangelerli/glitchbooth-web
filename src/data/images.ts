@@ -1,0 +1,149 @@
+import { GalleryImage } from '../types';
+
+export const STOCK_GALLERY_IMAGES: GalleryImage[] = [
+  {
+    id: 'img-1',
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=500&auto=format&fit=crop',
+    title: 'VECTOR_DECAY.RAW',
+    timestamp: '2026-06-02 14:21:05',
+    shutter: '1/120s',
+    iso: 'ISO 800',
+    glitchLevel: 74,
+    filename: 'IMG_4021_GLITCH.BMP'
+  },
+  {
+    id: 'img-2',
+    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=500&auto=format&fit=crop',
+    title: 'GHOST_PORTRAIT_02.RAW',
+    timestamp: '2026-06-02 15:03:12',
+    shutter: '1/60s',
+    iso: 'ISO 1600',
+    glitchLevel: 42,
+    filename: 'BOOTH_DITHER_93.PNG'
+  },
+  {
+    id: 'img-3',
+    url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=500&auto=format&fit=crop',
+    title: 'ANALOG_ARTEFACT_11.RAW',
+    timestamp: '2026-06-02 15:44:59',
+    shutter: '1/250s',
+    iso: 'ISO 400',
+    glitchLevel: 89,
+    filename: 'KERN_PANIC_09.RAW'
+  },
+  {
+    id: 'img-4',
+    url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=500&auto=format&fit=crop',
+    title: 'HARDWARE_FAULT_X.RAW',
+    timestamp: '2026-06-02 16:10:22',
+    shutter: '1/125s',
+    iso: 'ISO 200',
+    glitchLevel: 65,
+    filename: 'TEMP_BUFFER_88.XBM'
+  },
+  {
+    id: 'img-5',
+    url: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=500&auto=format&fit=crop',
+    title: 'NEURAL_EMULATION_4.RAW',
+    timestamp: '2026-06-02 16:32:01',
+    shutter: '1/50s',
+    iso: 'ISO 3200',
+    glitchLevel: 95,
+    filename: 'OVERFLOW_HEX_12.BMP'
+  },
+  {
+    id: 'img-6',
+    url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=500&auto=format&fit=crop',
+    title: 'CATHODE_BOUNCE_5.RAW',
+    timestamp: '2026-06-02 17:01:45',
+    shutter: '1/80s',
+    iso: 'ISO 800',
+    glitchLevel: 51,
+    filename: 'SCAN_SYNC_77.PNG'
+  },
+  {
+    id: 'img-7',
+    url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=500&auto=format&fit=crop',
+    title: 'STREET_DECAY_49.RAW',
+    timestamp: '2026-06-02 17:49:12',
+    shutter: '1/500s',
+    iso: 'ISO 100',
+    glitchLevel: 30,
+    filename: 'SHUTTER_ERROR_0.RAW'
+  },
+  {
+    id: 'img-8',
+    url: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=500&auto=format&fit=crop',
+    title: 'SYS_OVERLOAD_9.RAW',
+    timestamp: '2026-06-02 18:02:59',
+    shutter: '1/120s',
+    iso: 'ISO 400',
+    glitchLevel: 82,
+    filename: 'CRT_EMULATOR_03.BMP'
+  },
+  {
+    id: 'img-9',
+    url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=500&auto=format&fit=crop',
+    title: 'SINE_DISTORTION.RAW',
+    timestamp: '2026-06-02 18:25:31',
+    shutter: '1/200s',
+    iso: 'ISO 800',
+    glitchLevel: 91,
+    filename: 'WAVE_DECAY_19.PNG'
+  },
+  {
+    id: 'img-10',
+    url: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=500&auto=format&fit=crop',
+    title: 'MEM_ADDR_FAULT.RAW',
+    timestamp: '2026-06-02 18:44:02',
+    shutter: '1/60s',
+    iso: 'ISO 1600',
+    glitchLevel: 78,
+    filename: 'HEX_DUMP_AA.RAW'
+  },
+  {
+    id: 'img-11',
+    url: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?q=80&w=500&auto=format&fit=crop',
+    title: 'DIODE_MATRIX_00.RAW',
+    timestamp: '2026-06-02 19:01:10',
+    shutter: '1/160s',
+    iso: 'ISO 800',
+    glitchLevel: 63,
+    filename: 'PI_BOOTH_2026.BMP'
+  },
+  {
+    id: 'img-12',
+    url: 'https://images.unsplash.com/photo-1488161628813-04466f872be2?q=80&w=500&auto=format&fit=crop',
+    title: 'VOLT_FLUCT_04.RAW',
+    timestamp: '2026-06-02 19:05:44',
+    shutter: '1/125s',
+    iso: 'ISO 400',
+    glitchLevel: 70,
+    filename: 'FEED_ACTIVE_00.RAW'
+  },
+  {
+    id: 'img-13',
+    url: 'https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?q=80&w=500&auto=format&fit=crop',
+    title: 'REVERSED_HALO_22.RAW',
+    timestamp: '2026-06-02 19:06:12',
+    shutter: '1/80s',
+    iso: 'ISO 800',
+    glitchLevel: 58,
+    filename: 'HALO_FAULT_81.PNG'
+  },
+  {
+    id: 'img-14',
+    url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=500&auto=format&fit=crop',
+    title: 'KERNEL_LOG_GHOST.RAW',
+    timestamp: '2026-06-02 19:06:55',
+    shutter: '1/250s',
+    iso: 'ISO 1600',
+    glitchLevel: 87,
+    filename: 'KERN_PANIC_99.BMP'
+  }
+];
+
+export function getRandomizedImages(count: number): GalleryImage[] {
+  const shuffled = [...STOCK_GALLERY_IMAGES].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+}

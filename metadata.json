@@ -1,0 +1,6 @@
+{
+  "name": "Glitch Booth",
+  "description": "High-contrast digital brutalist photo gallery and live installation terminal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

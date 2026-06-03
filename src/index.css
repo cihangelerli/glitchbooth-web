@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "JetBrains Mono", monospace;
+  --font-display: "Space Mono", monospace;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-matrix: #00ff41;
+  --color-matrix-dim: #00e639;
+  --color-magenta: #fe00fe;
+  --color-magenta-dim: #ffabf3;
+  --color-cyber: #00daf8;
+  --color-void: #000000;
+  --color-dark-gray: #131313;
+  --color-surface-container: #1a1a1a;
+  
+  --animate-blink: blink 1s step-end infinite;
+  
+  @keyframes blink {
+    from, to { border-color: transparent }
+    50% { border-color: currentColor }
+  }
+}
+
+/* Custom visual scanlines and CRT display effects */
+body {
+  background-color: #131313;
+  color: #e2e2e2;
+  font-family: "JetBrains Mono", monospace;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Persistent CRT scanlines that overlay only very subtly */
+.scanlines-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%, 
+    rgba(0, 0, 0, 0.3) 50%
+  ), linear-gradient(
+    90deg, 
+    rgba(255, 0, 0, 0.02), 
+    rgba(0, 255, 0, 0.01), 
+    rgba(0, 0, 255, 0.02)
+  );
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Screen flicker simulation */
+@keyframes flicker {
+  0% { opacity: 0.98; }
+  50% { opacity: 1; }
+  100% { opacity: 0.99; }
+}
+
+.crt-flicker {
+  animation: flicker 0.15s infinite;
+}
+
+/* Subtle phosphor bleed/glow effects */
+.glow-text-matrix {
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.7);
+}
+
+.glow-text-magenta {
+  text-shadow: 0 0 6px rgba(254, 0, 254, 0.7);
+}
+
+.glow-text-cyber {
+  text-shadow: 0 0 6px rgba(0, 218, 248, 0.7);
+}
+
+.glow-border-matrix {
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.25);
+}
+
+.glow-border-magenta {
+  box-shadow: 0 0 15px rgba(254, 0, 254, 0.25);
+}
+
+/* Custom grid decorations */
+.grid-brutalist {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+/* Scanline flicker keyframes */
+@keyframes scanline-scroll {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.scanline-moving-bar {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(to bottom, transparent, rgba(0, 255, 65, 0.04), transparent);
+  animation: scanline-scroll 6s linear infinite;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Hide scrollbar elegantly for aesthetics */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #00ff41;
+  border-radius: 0px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ffabf3;
+}
