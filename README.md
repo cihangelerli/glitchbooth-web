@@ -1,20 +1,30 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# Glitch Booth
 
-# Run and deploy your AI Studio app
+Created in 2026 by **Dirtcake Studio** in Istanbul.
 
-This contains everything you need to run your app locally.
+## About the Project
 
-View your app in AI Studio: https://ai.studio/apps/1cac1045-7951-4b5a-ad2a-ba6c7d0237cf
+An interactive hardware and software photo experience focusing on:
 
-## Run Locally
+- Real-time analog-style digital glitch captures
+- Instant cloud asset ingestion via ImageKit CDN pipelines
+- Serverless, database-free web archive and multi-lane live marquees
 
-**Prerequisites:**  Node.js
+## Powered By
 
+- Dirtcake Studio
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Glitchbooth Contact & Socials
+
+- Website: [https://www.glitchbooth.online](https://www.glitchbooth.online)
+- Studio Website: [https://www.dirtcakestudio.com](https://www.dirtcakestudio.com)
+- Instagram: @glitchbooth.online
+
+## Dirtcake Studio Contact & Socials
+
+- Website: [https://www.dirtcakestudio.com](https://www.dirtcakestudio.com)
+- Instagram: @dirtcakestudio
+- Twitter: @dirtcakestudio
+- Behance: https://www.behance.net/dirtcakestudio
+- Bluesky: dirtcakestudio.bsky.social
+- Youtube: @dirtcakestudio
