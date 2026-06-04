@@ -1,0 +1,14 @@
+# https://www.robotstxt.org/robotstxt.html
+
+# Allow all search engines (Google, Bing, DuckDuckGo, etc.) to crawl the entire site
+User-agent: *
+Allow: /
+
+# Prevent search engines from crawling temporary or broken paths if they ever exist
+Disallow: /cgi-bin/
+
+# Host domain definition
+Host: https://glitchbooth.online
+
+# Link to your sitemap (if you choose to generate one later)
+Sitemap: https://glitchbooth.online/sitemap.xml
