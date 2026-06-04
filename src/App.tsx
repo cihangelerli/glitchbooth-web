@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import GlitchMarqueeRow from "./components/GlitchMarqueeRow";
@@ -17,21 +17,19 @@ export default function App() {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Shuffles your real live ImageKit images pool directly
+  // Reusable Fisher-Yates array randomizer
+  const shuffleArray = (array: GalleryImage[]): GalleryImage[] => {
+    const scrambled = [...array];
+    for (let i = scrambled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [scrambled[i], scrambled[j]] = [scrambled[j], scrambled[i]];
+    }
+    return scrambled;
+  };
+
+  // Shuffles your live image pool on command
   const handleRandomizeImages = () => {
-    setImagesPool((prevImages) => {
-      // 1. Make a safe copy of your current images array
-      const shuffled = [...prevImages];
-
-      // 2. Scramble the order of the array mix randomly
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-
-      // 3. Save the scrambled live data back into the pool
-      return shuffled;
-    });
+    setImagesPool((prevImages) => shuffleArray(prevImages));
   };
 
   useEffect(() => {
@@ -39,13 +37,14 @@ export default function App() {
       let activePool = STOCK_GALLERY_IMAGES;
 
       try {
-        // 2. Fetch all real asset atoms from your ImageKit serverless folder proxy
         const response = await fetch("/api/images");
         if (response.ok) {
           const liveData = await response.json();
           if (liveData && liveData.length > 0) {
-            activePool = liveData;
-            setImagesPool(liveData);
+            // Shuffle immediately on initial load so it never looks stale
+            const randomizedLoad = shuffleArray(liveData);
+            activePool = randomizedLoad;
+            setImagesPool(randomizedLoad);
           }
         }
       } catch (err) {
@@ -53,31 +52,27 @@ export default function App() {
           "ImageKit sync failed, falling back to stock assets:",
           err,
         );
+        // Shuffle stock assets on fallback failure too
+        setImagesPool(shuffleArray(STOCK_GALLERY_IMAGES));
       } finally {
         setLoading(false);
       }
 
-      // 3. QR CODE / DEEP LINK INTERCEPTION LOOP
-      // Check if the visitor arrived via a printed sticker or screen QR link (/p/id)
+      // QR CODE / DEEP LINK INTERCEPTION LOOP
       const path = window.location.pathname;
       if (path.startsWith("/p/")) {
         const photoId = path.split("/p/")[1];
 
         if (photoId) {
-          // Look through our active asset pool to see if this photo profile metadata matches
           const existingMatch = activePool.find((img) => img.id === photoId);
 
           if (existingMatch) {
             setSelectedImage(existingMatch);
           } else {
-            // Fallback: If it's a brand new capture, reconstruct the target frame schema dynamically
-            //  CLEANED DYNAMIC FALLBACK
-            // 1. Clean off any format tags if present in the ID string
             const cleanId = photoId.replace("_color", "");
-            let derivedTimestamp = "2026-06-03 00:00:00"; // Absolute fallback if parsing fails
+            let derivedTimestamp = "2026-06-03 00:00:00";
 
             if (/^\d+$/.test(cleanId)) {
-              // Format A: ID is Unix Epoch Milliseconds (e.g., 1780303090604)
               const date = new Date(parseInt(cleanId, 10));
               if (!isNaN(date.getTime())) {
                 const yyyy = date.getFullYear();
@@ -89,20 +84,18 @@ export default function App() {
                 derivedTimestamp = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
               }
             } else {
-              // Format B: ID is Legacy String (e.g., 20260603_173400)
               const parts = cleanId.split("_");
               if (
                 parts.length === 2 &&
                 parts[0].length === 8 &&
                 parts[1].length === 6
               ) {
-                const d = parts[0]; // YYYYMMDD
-                const t = parts[1]; // HHMMSS
+                const d = parts[0];
+                const t = parts[1];
                 derivedTimestamp = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)} ${t.substring(0, 2)}:${t.substring(2, 4)}:${t.substring(4, 6)}`;
               }
             }
 
-            //  FIXED CODE
             const deepLinkedImage = {
               id: photoId,
               url: `https://ik.imagekit.io/w6lsfsw8j/booth_captures/${photoId}_color.jpg`,
@@ -113,7 +106,6 @@ export default function App() {
             setSelectedImage(deepLinkedImage);
           }
 
-          // Force React to skip the main landing module and immediately draw the inspect stage
           setCurrentView("details");
         }
       }
@@ -121,6 +113,30 @@ export default function App() {
 
     initializeProjectData();
   }, []);
+
+  // DYNAMIC BACKGROUND GENERATOR MATRIX
+  // Prevents reshuffling on every component text change, but fills gaps perfectly
+  const backgroundRows = useMemo(() => {
+    const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
+
+    const generateRobustRow = () => {
+      let uniqueRowSelection = shuffleArray(base);
+
+      // If the asset pool size is small, keep merging shuffled variations
+      // to ensure the width overflows the screen edge flawlessly
+      while (uniqueRowSelection.length < 12) {
+        uniqueRowSelection = [...uniqueRowSelection, ...shuffleArray(base)];
+      }
+      return uniqueRowSelection;
+    };
+
+    return {
+      row1: generateRobustRow(),
+      row2: generateRobustRow(),
+      row3: generateRobustRow(),
+      row4: generateRobustRow(),
+    };
+  }, [imagesPool]);
 
   const handleLearnMore = () => {
     const element = document.getElementById("about-section");
@@ -140,24 +156,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Safe slicing for your 4 background layout marquee rows
-  const row1Images = imagesPool.slice(0, 4);
-  const row2Images = imagesPool.slice(4, 8);
-  const row3Images = imagesPool.slice(8, 11);
-  const row4Images = imagesPool.slice(11, 14);
-
   return (
     <div
       className="relative min-h-screen bg-[#131313] text-[#e2e2e2]"
       id="home"
     >
-      {/* Invisible screen scanline strip overlay */}
       <div className="scanlines-overlay" />
-
-      {/* Global moving horizontal CRT beam */}
       <div className="scanline-moving-bar" />
 
-      {/* Dynamic Header */}
       <Header currentView={currentView} setView={setCurrentView} />
 
       <main className="pb-16 min-h-[75vh]">
@@ -176,38 +182,30 @@ export default function App() {
                   id="gallery-section"
                   className="relative w-full min-h-[calc(100vh-80px)] min-h-[550px] md:min-h-[750px] overflow-hidden bg-black flex items-center justify-center border-b border-matrix/20 px-4 py-12"
                 >
-                  {/* BACKSTAGE MARQUEES: Feeds real ImageKit links to your background lanes */}
+                  {/* BACKGROUND MARQUEES */}
                   <div className="absolute inset-0 z-0 flex flex-col justify-between py-2 opacity-30 md:opacity-35 select-none pointer-events-none">
                     <GlitchMarqueeRow
-                      images={
-                        row1Images.length ? row1Images : STOCK_GALLERY_IMAGES
-                      }
+                      images={backgroundRows.row1}
                       direction="right"
-                      speed={95}
+                      speed={1745}
                       interactive={false}
                     />
                     <GlitchMarqueeRow
-                      images={
-                        row2Images.length ? row2Images : STOCK_GALLERY_IMAGES
-                      }
+                      images={backgroundRows.row2}
                       direction="left"
-                      speed={85}
+                      speed={1740}
                       interactive={false}
                     />
                     <GlitchMarqueeRow
-                      images={
-                        row3Images.length ? row3Images : STOCK_GALLERY_IMAGES
-                      }
+                      images={backgroundRows.row3}
                       direction="right"
-                      speed={105}
+                      speed={1750}
                       interactive={false}
                     />
                     <GlitchMarqueeRow
-                      images={
-                        row4Images.length ? row4Images : STOCK_GALLERY_IMAGES
-                      }
+                      images={backgroundRows.row4}
                       direction="left"
-                      speed={90}
+                      speed={1745}
                       interactive={false}
                     />
                   </div>
@@ -247,7 +245,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="w-full border-t border-matrix/20 bg-black py-8 font-mono text-xs text-[#84967e] select-none">
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left flex items-center space-x-2">

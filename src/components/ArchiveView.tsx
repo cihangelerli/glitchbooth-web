@@ -4,8 +4,8 @@ import {
   SlidersHorizontal,
   ArrowLeft,
   RefreshCw,
-  Grid,
-  FileImage,
+  Clock,
+  ArrowUpDown,
 } from "lucide-react";
 import { GalleryImage } from "../types";
 
@@ -23,17 +23,17 @@ export default function ArchiveView({
   onRandomize,
 }: ArchiveViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterGlitch, setFilterGlitch] = useState<number | null>(null);
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
+  const [sortBy, setSortBy] = useState<"latest" | "oldest" | "filename">(
+    "latest",
+  );
 
-  // Filter images based on search query and glitch levels
-  // Filter images based on search query and glitch levels with safe fallbacks
+  // 1. Core Filter Engine
   const filteredImages = images.filter((img) => {
-    // 1. Safeguard against undefined strings so .toLowerCase() never crashes the app
     const title = img.title || "";
-    const filename = img.filename || (img as any).name || ""; // Fallback to 'name' if 'filename' is missing
+    const filename = img.filename || (img as any).name || "";
     const shutter = img.shutter || "1/60s";
     const iso = img.iso || "ISO 400";
-    const glitchLevel = img.glitchLevel ?? 0;
 
     const matchesSearch =
       title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -41,11 +41,40 @@ export default function ArchiveView({
       shutter.toLowerCase().includes(searchQuery.toLowerCase()) ||
       iso.toLowerCase().includes(searchQuery.toLowerCase());
 
-    if (filterGlitch === null) return matchesSearch;
-    if (filterGlitch === 80) return matchesSearch && glitchLevel >= 80;
-    if (filterGlitch === 50)
-      return matchesSearch && glitchLevel >= 50 && glitchLevel < 80;
-    return matchesSearch && glitchLevel < 50;
+    if (!matchesSearch) return false;
+
+    // Temporal Filter Computations
+    if (dateFilter === "all") return true;
+
+    const imgDate = new Date(img.timestamp || (img as any).date || 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    oneWeekAgo.setHours(0, 0, 0, 0);
+
+    if (dateFilter === "today") {
+      return imgDate >= today;
+    }
+    if (dateFilter === "week") {
+      return imgDate >= oneWeekAgo;
+    }
+
+    return true;
+  });
+
+  // 2. Core Sorting Engine (Enforces Latest Date sequence by default on load)
+  const sortedAndFilteredImages = [...filteredImages].sort((a, b) => {
+    const timeA = new Date(a.timestamp || (a as any).date || 0).getTime();
+    const timeB = new Date(b.timestamp || (b as any).date || 0).getTime();
+
+    if (sortBy === "latest") return timeB - timeA;
+    if (sortBy === "oldest") return timeA - timeB;
+    if (sortBy === "filename") {
+      return (a.filename || "").localeCompare(b.filename || "");
+    }
+    return 0;
   });
 
   return (
@@ -65,9 +94,9 @@ export default function ArchiveView({
           </button>
 
           <h1 className="font-display text-2xl md:text-3xl font-extrabold text-[#00ff41] flex items-center space-x-2">
-            <span className="glow-text-matrix">/GLITCH_BOOTH/ARCHIVE</span>
+            <span className="glow-text-matrix">~/GLITCH_BOOTH/ARCHIVE</span>
             <span className="text-[10px] bg-matrix/10 border border-matrix/20 text-[#00ff41] font-mono px-2 py-0.5 ml-2">
-              {filteredImages.length} ATOMS
+              {sortedAndFilteredImages.length} CAPTURES
             </span>
           </h1>
         </div>
@@ -79,14 +108,14 @@ export default function ArchiveView({
           style={{ borderRadius: "0px" }}
         >
           <RefreshCw size={13} />
-          <span>RE-SEED_IMAGEKIT_LOADER</span>
+          <span>RE-SEED_IMAGE_LOADER</span>
         </button>
       </div>
 
-      {/* Database Filters Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8">
-        {/* Search Panel */}
-        <div className="md:col-span-6 relative">
+      {/* Brutalist Filters Bar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-8 font-mono text-xs">
+        {/* Search Input Box */}
+        <div className="lg:col-span-4 relative">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#3b4b37]">
             <Search size={15} />
           </span>
@@ -94,30 +123,28 @@ export default function ArchiveView({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="SCAN DB: SEARCH BY FILENAME, TITLE OR SHUTTER..."
-            className="w-full pl-10 pr-4 py-3 bg-black border border-matrix/30 text-white font-mono text-xs focus:border-[#00ff41] focus:ring-0 focus:outline-none placeholder:text-[#3b4b37]"
+            placeholder="SCAN DB: SEARCH RECORD FIELDS..."
+            className="w-full pl-10 pr-4 py-3 bg-black border border-matrix/30 text-white text-xs focus:border-[#00ff41] focus:ring-0 focus:outline-none placeholder:text-[#3b4b37]"
             style={{ borderRadius: "0px" }}
           />
         </div>
 
-        {/* Filter buttons block */}
-        {/* <div className="md:col-span-6 flex flex-wrap items-center md:justify-end gap-2 text-xs font-mono">
-          <div className="text-[10px] text-[#84967e] flex items-center space-x-1.5 mr-2">
-            <SlidersHorizontal size={12} />
-            <span>GLITCH_FILTER:</span>
+        {/* Date Filters Control Block */}
+        <div className="lg:col-span-5 flex flex-wrap items-center gap-2">
+          <div className="text-[10px] text-[#84967e] flex items-center space-x-1.5 mr-1 shrink-0">
+            <Clock size={12} />
+            <span>TIMELINE:</span>
           </div>
-
           {[
-            { label: "ALL_CHANNELS", value: null },
-            { label: "HIGH_DECAY (>=80%)", value: 80 },
-            { label: "MED_DECAY (50-79%)", value: 50 },
-            { label: "LOW_DECAY (<50%)", value: 30 },
+            { label: "ALL_TIME", value: "all" },
+            { label: "TODAY", value: "today" },
+            { label: "7_DAYS_EXP", value: "week" },
           ].map((btn) => (
             <button
               key={btn.label}
-              onClick={() => setFilterGlitch(btn.value)}
+              onClick={() => setDateFilter(btn.value as any)}
               className={`px-3 py-1.5 border text-[10px] font-bold transition-all cursor-pointer ${
-                filterGlitch === btn.value
+                dateFilter === btn.value
                   ? "bg-[#00ff41] text-black border-[#00ff41] shadow-[0_0_8px_rgba(0,255,65,0.3)]"
                   : "bg-black text-[#84967e] border-matrix/20 hover:border-matrix/50 hover:text-[#00ff41]"
               }`}
@@ -126,19 +153,46 @@ export default function ArchiveView({
               {btn.label}
             </button>
           ))}
-        </div> */}
+        </div>
+
+        {/* Sort Controls Block */}
+        <div className="lg:col-span-3 flex flex-wrap items-center lg:justify-end gap-2">
+          <div className="text-[10px] text-[#84967e] flex items-center space-x-1.5 mr-1 shrink-0">
+            <ArrowUpDown size={12} />
+            <span>SORT:</span>
+          </div>
+          {[
+            { label: "LATEST", value: "latest" },
+            { label: "OLDEST", value: "oldest" },
+            { label: "TAG_ID", value: "filename" },
+          ].map((btn) => (
+            <button
+              key={btn.label}
+              onClick={() => setSortBy(btn.value as any)}
+              className={`px-3 py-1.5 border text-[10px] font-bold transition-all cursor-pointer ${
+                sortBy === btn.value
+                  ? "bg-[#00ff41] text-black border-[#00ff41] shadow-[0_0_8px_rgba(0,255,65,0.3)]"
+                  : "bg-black text-[#84967e] border-matrix/20 hover:border-matrix/50 hover:text-[#00ff41]"
+              }`}
+              style={{ borderRadius: "0px" }}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Grid of pictures with high-contrast color restoration effect upon hover */}
-      {filteredImages.length === 0 ? (
+      {/* Grid Display Grid System */}
+      {sortedAndFilteredImages.length === 0 ? (
         <div className="border-2 border-dashed border-[#3b4b37]/40 py-24 text-center font-mono space-y-4">
           <div className="text-[#84967e] text-sm font-bold animate-pulse uppercase">
-            [ SCAN_FAULT: NO DATA DECAY SIGNALS CAPTURED ]
+            [ SCAN_FAULT: NO DATA REGISTRY SIGNALS RETURNED ]
           </div>
           <button
             onClick={() => {
               setSearchQuery("");
-              setFilterGlitch(null);
+              setDateFilter("all");
+              setSortBy("latest");
             }}
             className="text-xs text-[#00ff41] underline cursor-pointer"
           >
@@ -147,7 +201,7 @@ export default function ArchiveView({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredImages.map((img) => (
+          {sortedAndFilteredImages.map((img) => (
             <div
               key={img.id}
               onClick={() => onImageSelect(img)}
@@ -169,8 +223,6 @@ export default function ArchiveView({
                   src={img.url}
                   alt={img.title}
                   referrerPolicy="no-referrer"
-                  // Cleaned up classes: removed grayscale and extreme contrast shifts entirely.
-                  // Added a clean hover scale transition so it feels responsive without mutating capture colors.
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
 
@@ -178,10 +230,6 @@ export default function ArchiveView({
                 <span className="absolute top-2 left-2 bg-black/80 text-matrix border border-matrix/20 px-1 py-0.5 font-mono text-[8px] z-10">
                   {img.filename}
                 </span>
-
-                {/* <span className="absolute bottom-2 right-2 bg-black/80 text-magenta border border-magenta/20 px-1.5 py-0.5 font-mono text-[8px] tracking-wide z-10 font-bold">
-                  DECAY: {img.glitchLevel}%
-                </span> */}
               </div>
 
               {/* Photo Meta and Specs */}
@@ -193,14 +241,12 @@ export default function ArchiveView({
                   <span className="text-cyber text-[9px]">{img.shutter}</span>
                 </div>
                 <div className="flex justify-between text-[#84967e] text-[9px]">
-                  {/* <span>{img.iso || "ISO 400"}</span> */}
-                  {/* Bulletproof safe-access for the timestamp splitter */}
                   <span>
                     {
                       (
                         img.timestamp ||
                         (img as any).date ||
-                        "2026-06-03"
+                        "2026-06-04"
                       ).split(" ")[0]
                     }
                   </span>

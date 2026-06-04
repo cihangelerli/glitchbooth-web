@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Download, Instagram } from "lucide-react";
 import { GalleryImage } from "../types";
+import { ArrowLeft } from "lucide-react";
 
 interface DetailsViewProps {
   image: GalleryImage;
@@ -113,12 +114,13 @@ export default function DetailsView({
       <div className="mb-8">
         <button
           onClick={onBackToArchive}
-          className="inline-flex items-center space-x-2 text-[#00e639] hover:text-white text-xs font-bold tracking-wider transition-colors duration-200 cursor-pointer group bg-transparent border-0"
+          className="flex items-center space-x-1.5 font-mono text-xs text-[#84967e] hover:text-[#00ff41] transition-colors cursor-pointer group"
         >
-          <span className="group-hover:-translate-x-1 duration-200 transition-transform">
-            &lt;&lt;
-          </span>
-          <span>~\GALLERY</span>
+          <ArrowLeft
+            size={13}
+            className="group-hover:-translate-x-1 transition-transform"
+          />
+          <span>[ RETURN_TO_GALLERY ]</span>
         </button>
       </div>
 
