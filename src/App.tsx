@@ -187,25 +187,25 @@ export default function App() {
                     <GlitchMarqueeRow
                       images={backgroundRows.row1}
                       direction="right"
-                      speed={1745}
+                      speed={22} // 16 seconds pacing per image segment
                       interactive={false}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row2}
                       direction="left"
-                      speed={1740}
+                      speed={21} // Slightly different to keep rows unsynced
                       interactive={false}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row3}
                       direction="right"
-                      speed={1750}
+                      speed={23}
                       interactive={false}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row4}
                       direction="left"
-                      speed={1745}
+                      speed={24}
                       interactive={false}
                     />
                   </div>

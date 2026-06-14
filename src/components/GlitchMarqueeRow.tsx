@@ -1,9 +1,9 @@
-import { motion } from 'motion/react';
-import { GalleryImage } from '../types';
+import { motion } from "motion/react";
+import { GalleryImage } from "../types";
 
 interface GlitchMarqueeRowProps {
   images: GalleryImage[];
-  direction: 'left' | 'right';
+  direction: "left" | "right";
   speed?: number;
   onImageClick?: (img: GalleryImage) => void;
   interactive?: boolean;
@@ -12,12 +12,17 @@ interface GlitchMarqueeRowProps {
 export default function GlitchMarqueeRow({
   images,
   direction,
-  speed = 25,
+  speed = 15, // speed now acts as a stable velocity multiplier (higher = slower crawl)
   onImageClick,
   interactive = true,
 }: GlitchMarqueeRowProps) {
   // Duplicate the images to ensure seamless infinite looping matching the screen width
   const loopImages = [...images, ...images, ...images, ...images];
+
+  // CONSTANT VELOCITY MATH: Calculate duration dynamically based on image count
+  // This ensures images move at the exact same physical pace whether you have 4 or 400 captures.
+  const safeCount = images.length || 1;
+  const constantVelocityDuration = safeCount * speed;
 
   return (
     <div className="relative w-full overflow-hidden py-1 border-t border-b border-matrix/10 bg-black flex items-center select-none group">
@@ -28,24 +33,24 @@ export default function GlitchMarqueeRow({
       <motion.div
         className="flex space-x-4 pr-4"
         animate={{
-          x: direction === 'left' ? [0, '-50%'] : ['-50%', 0],
+          x: direction === "left" ? [0, "-50%"] : ["-50%", 0],
         }}
         transition={{
-          ease: 'linear',
-          duration: speed,
+          ease: "linear",
+          duration: constantVelocityDuration, // Uses the dynamic speed calculation
           repeat: Infinity,
         }}
         // Pause on hover only if interactive
-        whileHover={interactive ? { animationPlayState: 'paused' } : undefined}
+        whileHover={interactive ? { animationPlayState: "paused" } : undefined}
       >
         {loopImages.map((img, idx) => (
           <div
             key={`${img.id}-${idx}`}
             onClick={() => interactive && onImageClick?.(img)}
             className={`relative w-36 h-36 md:w-56 md:h-56 shrink-0 border border-[#3b4b37] transition-all duration-300 overflow-hidden bg-[#0e0e0e] shadow-[inset_0_0_15px_rgba(0,0,0,0.8)] ${
-              interactive 
-                ? 'hover:border-[#00ff41] cursor-pointer group/item' 
-                : 'cursor-default pointer-events-none'
+              interactive
+                ? "hover:border-[#00ff41] cursor-pointer group/item"
+                : "cursor-default pointer-events-none"
             }`}
           >
             {/* Cyber overlay elements representing diagnostic state only if interactive */}
@@ -54,7 +59,7 @@ export default function GlitchMarqueeRow({
                 <div className="absolute top-1 left-1 bg-black/80 border border-matrix/20 px-1 py-0.5 text-[8px] font-mono text-[#00ff41] opacity-0 group-hover/item:opacity-100 transition-all duration-200 z-10">
                   {img.filename}
                 </div>
-                
+
                 <div className="absolute bottom-1 right-1 bg-black/80 border border-magenta/20 px-1 py-0.5 text-[8px] font-mono text-magenta opacity-0 group-hover/item:opacity-100 transition-all duration-200 z-10">
                   GLITCH // {img.glitchLevel}%
                 </div>
@@ -75,9 +80,9 @@ export default function GlitchMarqueeRow({
               alt={img.title}
               referrerPolicy="no-referrer"
               className={`w-full h-full object-cover grayscale contrast-[1.8] brightness-[0.95] transition-all duration-500 ${
-                interactive 
-                  ? 'group-hover/item:scale-105 group-hover/item:contrast-[2.2] group-hover/item:brightness-[1.1]' 
-                  : ''
+                interactive
+                  ? "group-hover/item:scale-105 group-hover/item:contrast-[2.2] group-hover/item:brightness-[1.1]"
+                  : ""
               }`}
             />
 

@@ -28,6 +28,25 @@ export default function ArchiveView({
     "latest",
   );
 
+  // Cross-Browser Bulletproof Millisecond Parser (Fixes Safari/iOS NaN sorting error)
+  const getSafeTime = (img: GalleryImage): number => {
+    const rawDate = img.timestamp || (img as any).date;
+    if (!rawDate) return 0;
+
+    // If already a Unix millisecond number
+    if (typeof rawDate === "number") return rawDate;
+
+    let dateStr = String(rawDate).trim();
+
+    // Convert "YYYY-MM-DD HH:MM:SS" to standard ISO compliance "YYYY-MM-DDTHH:MM:SS"
+    if (dateStr.includes(" ") && !dateStr.includes("T")) {
+      dateStr = dateStr.replace(" ", "T");
+    }
+
+    const parsed = new Date(dateStr).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // 1. Core Filter Engine
   const filteredImages = images.filter((img) => {
     const title = img.title || "";
@@ -46,7 +65,7 @@ export default function ArchiveView({
     // Temporal Filter Computations
     if (dateFilter === "all") return true;
 
-    const imgDate = new Date(img.timestamp || (img as any).date || 0);
+    const imgTime = getSafeTime(img);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -55,22 +74,22 @@ export default function ArchiveView({
     oneWeekAgo.setHours(0, 0, 0, 0);
 
     if (dateFilter === "today") {
-      return imgDate >= today;
+      return imgTime >= today.getTime();
     }
     if (dateFilter === "week") {
-      return imgDate >= oneWeekAgo;
+      return imgTime >= oneWeekAgo.getTime();
     }
 
     return true;
   });
 
-  // 2. Core Sorting Engine (Enforces Latest Date sequence by default on load)
+  // 2. Core Sorting Engine (Enforces Clean Sequential Order regardless of input state)
   const sortedAndFilteredImages = [...filteredImages].sort((a, b) => {
-    const timeA = new Date(a.timestamp || (a as any).date || 0).getTime();
-    const timeB = new Date(b.timestamp || (b as any).date || 0).getTime();
+    const timeA = getSafeTime(a);
+    const timeB = getSafeTime(b);
 
-    if (sortBy === "latest") return timeB - timeA;
-    if (sortBy === "oldest") return timeA - timeB;
+    if (sortBy === "latest") return timeB - timeA; // High numbers (Newer dates) first
+    if (sortBy === "oldest") return timeA - timeB; // Low numbers (Older dates) first
     if (sortBy === "filename") {
       return (a.filename || "").localeCompare(b.filename || "");
     }

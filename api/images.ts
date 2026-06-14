@@ -40,7 +40,8 @@ export default async function handler(req: any, res: any) {
         url: file.url,
         name: file.name,
         title: `CAPTURE_${cleanId}`,
-        date: file.createdAt.split("T")[0], // extracts YYYY-MM-DD
+        date: file.createdAt.split("T")[0], // extracts YYYY-MM-DD for UI text components
+        timestamp: file.createdAt, // PRESERVES HIGH-PRECISION TIME: Full ISO string for exact sorting
       };
     });
 
