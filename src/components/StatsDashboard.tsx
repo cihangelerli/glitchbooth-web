@@ -33,8 +33,8 @@ export default function StatsDashboard() {
         // CHANGED: Changed to "/stats.json" to natively match local public folder files.
         // NOTE: When deploying live, change this string to your absolute ImageKit URL:
         // "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"
-        const baseUrl = "/stats.json"; // LOCAL
-        // const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"; // DEPLOY
+        // const baseUrl = "/stats.json"; // LOCAL
+        const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"; // DEPLOY
 
         // SURGICAL TWEAK: Append a dynamic timestamp parameter (?t=...)
         // This forces the CDN and browser to pull the fresh file instantly every 5 minutes.

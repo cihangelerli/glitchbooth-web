@@ -7,13 +7,13 @@
   "last_capture_iso": "2026-07-01T07:13:55Z",
   "uptime_hours": 0.18,
   "effects_popularity": {
-    "ascii_matrix_usage_pct": 0,
+    "ascii_matrix_usage_pct": 100,
     "signal_drift_usage_pct": 0,
     "data_corruption_usage_pct": 0,
     "pixel_damage_usage_pct": 0,
     "melt_usage_pct": 0,
     "chroma_shift_usage_pct": 0,
-    "no_glitch_usage_pct": 100
+    "no_glitch_usage_pct": 0
   },
-  "most_popular_combo": "No Glitch"
+  "most_popular_combo": "ASCII Matrix"
 }
