@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Hero from "./components/Hero";
 import GlitchMarqueeRow from "./components/GlitchMarqueeRow";
 import Specs from "./components/Specs";
+import StatsDashboard from "./components/StatsDashboard";
 import ContactForm from "./components/ContactForm";
 import ArchiveView from "./components/ArchiveView";
 import DetailsView from "./components/DetailsView";
@@ -221,6 +222,7 @@ export default function App() {
                 </section>
 
                 <Specs />
+                <StatsDashboard />
                 <ContactForm />
               </>
             )}

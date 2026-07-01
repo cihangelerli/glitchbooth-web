@@ -13,6 +13,7 @@ export default function Header({ currentView, setView }: HeaderProps) {
   const navItems = [
     { label: "GALLERY", target: "archive" },
     { label: "ABOUT", target: "about-section" },
+    { label: "STATS", target: "stats-section" },
     { label: "CONNECT", target: "connect-section" },
   ];
 

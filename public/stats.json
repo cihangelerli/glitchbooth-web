@@ -1,0 +1,18 @@
+{
+  "total_captures": 509,
+  "successful_uploads": 509,
+  "failed_uploads": 0,
+  "prints_completed": 509,
+  "first_capture_iso": "2026-07-01T07:13:55Z",
+  "last_capture_iso": "2026-07-01T07:13:55Z",
+  "uptime_hours": 0.08,
+  "effects_popularity": {
+    "ascii_matrix_usage_pct": 100,
+    "signal_drift_usage_pct": 0,
+    "data_corruption_usage_pct": 100,
+    "pixel_damage_usage_pct": 0,
+    "melt_usage_pct": 0,
+    "chroma_shift_usage_pct": 0
+  },
+  "most_popular_combo": "ASCII Matrix + Data Corruption"
+}
