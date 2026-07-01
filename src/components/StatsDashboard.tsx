@@ -33,11 +33,13 @@ export default function StatsDashboard() {
         // CHANGED: Changed to "/stats.json" to natively match local public folder files.
         // NOTE: When deploying live, change this string to your absolute ImageKit URL:
         // "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"
-        // const response = await fetch("/stats.json"); // LOCAL
-        // const response = await fetch("https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"); // DEPLOY
-        const response = await fetch(
-          "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json",
-        );
+        // const baseUrl = "/stats.json" // LOCAL
+        // const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"; // DEPLOY
+
+        const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json";
+        // SURGICAL TWEAK: Append a dynamic timestamp parameter (?t=...)
+        // This forces the CDN and browser to pull the fresh file instantly every 5 minutes.
+        const response = await fetch(`${baseUrl}?t=${Date.now()}`);
 
         if (!response.ok) {
           throw new Error(
@@ -57,7 +59,7 @@ export default function StatsDashboard() {
     }
 
     fetchCloudTelemetry();
-    const interval = setInterval(fetchCloudTelemetry, 300000); // Refresh every 5 mins
+    const interval = setInterval(fetchCloudTelemetry, 70000); // Refresh every ~1 min
     return () => clearInterval(interval);
   }, []);
 
