@@ -33,10 +33,9 @@ export default function StatsDashboard() {
         // CHANGED: Changed to "/stats.json" to natively match local public folder files.
         // NOTE: When deploying live, change this string to your absolute ImageKit URL:
         // "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"
-        // const baseUrl = "/stats.json" // LOCAL
+        const baseUrl = "/stats.json"; // LOCAL
         // const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"; // DEPLOY
 
-        const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json";
         // SURGICAL TWEAK: Append a dynamic timestamp parameter (?t=...)
         // This forces the CDN and browser to pull the fresh file instantly every 5 minutes.
         const response = await fetch(`${baseUrl}?t=${Date.now()}`);
@@ -59,7 +58,7 @@ export default function StatsDashboard() {
     }
 
     fetchCloudTelemetry();
-    const interval = setInterval(fetchCloudTelemetry, 70000); // Refresh every ~1 min
+    const interval = setInterval(fetchCloudTelemetry, 120000); // Refresh every 2 mins
     return () => clearInterval(interval);
   }, []);
 
@@ -122,7 +121,7 @@ export default function StatsDashboard() {
       {!loading && !error && data && (
         <>
           {/* Analytics Main Metric Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-12">
             <div className="border border-matrix/20 bg-[#161616] p-6 relative group overflow-hidden">
               <div className="text-[10px] font-mono text-[#84967e] mb-1">
                 TOTAL_CAPTURES
@@ -135,6 +134,8 @@ export default function StatsDashboard() {
                 className="absolute bottom-4 right-4 text-matrix/20 group-hover:text-[#00ff41]/40 transition-colors"
               />
             </div>
+
+            {/*
 
             <div className="border border-matrix/20 bg-[#161616] p-6 relative group overflow-hidden">
               <div className="text-[10px] font-mono text-[#84967e] mb-1">
@@ -161,6 +162,8 @@ export default function StatsDashboard() {
                 className="absolute bottom-4 right-4 text-matrix/20 group-hover:text-[#00daf8]/40 transition-colors"
               />
             </div>
+
+            */}
 
             <div className="border border-matrix/20 bg-[#161616] p-6 relative group overflow-hidden">
               <div className="text-[10px] font-mono text-[#84967e] mb-1">
@@ -255,7 +258,7 @@ export default function StatsDashboard() {
               <div className="text-[10px] font-mono text-matrix/40 tracking-wide leading-relaxed">
                 * PIPELINE_NOTE: Analytics compilation aggregates operational
                 log sequences generated locally across bare-metal matrices and
-                structured within the ImageKit telemetry cloud node ecosystem.
+                structured within the telemetry cloud since July 1st, 2026.
               </div>
             </div>
           </div>
