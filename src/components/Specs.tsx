@@ -186,13 +186,24 @@ export default function Specs() {
           {/* ABOUT THE BOOTH text blocks exactly matching specs layout */}
           <div className="space-y-4">
             <h4 className="font-display text-[#00ff41] text-xs font-bold tracking-widest uppercase">
-              // ABOUT_GLITCHBOOTH
+              // ABOUT_GLITCH_BOOTH
             </h4>
             <p className="font-mono text-xs sm:text-sm text-[#e2e2e2] leading-relaxed">
-              GLITCH_BOOTH is an experimental digital installation designed to
+              GLITCH BOOTH is an experimental digital installation designed to
               explore the aesthetics of technology in states of distress.
               Gitchbooth doesn't just take photos; it documents the digital
               ghost in the machine in a little urban artifact...
+            </p>
+            <p className="font-mono text-xs sm:text-sm text-[#e2e2e2] leading-relaxed">
+              GLITCH BOOTH is powered by{" "}
+              <a
+                href="https://dirtcakestudio.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-bold underline hover:text-[#00ff41] transition-colors"
+              >
+                Dirtcake Studio
+              </a>
             </p>
           </div>
         </div>
