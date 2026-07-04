@@ -255,7 +255,7 @@ export default function StatsDashboard() {
                 </div>
               </div>
 
-              <div className="text-[10px] font-mono text-matrix/40 tracking-wide leading-relaxed">
+              <div className="text-[12px] font-mono text-matrix/40 tracking-wide leading-relaxed">
                 * PIPELINE_NOTE: Analytics compilation aggregates operational
                 log sequences generated locally across bare-metal matrices and
                 structured within the telemetry cloud since July 1st, 2026.
