@@ -1,7 +1,7 @@
 {
   "rewrites": [
     {
-      "source": "/p/:id",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
