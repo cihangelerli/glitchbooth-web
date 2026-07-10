@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import GlitchMarqueeRow from "./components/GlitchMarqueeRow";
+import Slideshow from "./components/Slideshow";
 import Specs from "./components/Specs";
 import StatsDashboard from "./components/StatsDashboard";
 import ContactForm from "./components/ContactForm";
@@ -16,14 +17,19 @@ export default function App() {
   const [loading, setLoading] = useState<boolean>(true);
   const [isHeroDismissed, setIsHeroDismissed] = useState<boolean>(false);
 
-  // Set initial view state instantly from URL layout
   const [currentView, setCurrentView] = useState<
     "home" | "archive" | "details" | "slideshow"
   >(() => {
     const path = window.location.pathname;
-    return path === "/slideshow" || path === "/slideshow/"
-      ? "slideshow"
-      : "home";
+    const host = window.location.hostname;
+    if (
+      host.startsWith("slideshow.") ||
+      path === "/slideshow" ||
+      path === "/slideshow/"
+    ) {
+      return "slideshow";
+    }
+    return "home";
   });
 
   const shuffleArray = (array: GalleryImage[]): GalleryImage[] => {
@@ -41,8 +47,8 @@ export default function App() {
 
   useEffect(() => {
     async function initializeProjectData() {
-      const path = window.location.pathname;
       let activePool = STOCK_GALLERY_IMAGES;
+      const path = window.location.pathname;
 
       try {
         const response = await fetch("/api/images");
@@ -71,15 +77,12 @@ export default function App() {
           if (existingMatch) {
             setSelectedImage(existingMatch);
           } else {
-            const cleanId = photoId.replace("_color", "");
-            let derivedTimestamp = "2026-06-03 00:00:00";
-
             const deepLinkedImage = {
               id: photoId,
               url: `https://ik.imagekit.io/w6lsfsw8j/booth_captures/${photoId}_color.jpg`,
               filename: `${photoId}_color.jpg`,
               title: `CAPTURE_${photoId}`,
-              timestamp: derivedTimestamp,
+              timestamp: "2026-06-03 00:00:00",
             } as GalleryImage;
             setSelectedImage(deepLinkedImage);
           }
@@ -91,37 +94,29 @@ export default function App() {
     initializeProjectData();
   }, []);
 
+  // Standard Main Site Marquee Optimizations (Keeps sizes responsive on modern phones)
   const backgroundRows = useMemo(() => {
     const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
+
     const generateRobustRow = () => {
       let uniqueRowSelection = shuffleArray(base);
       while (uniqueRowSelection.length < 12) {
         uniqueRowSelection = [...uniqueRowSelection, ...shuffleArray(base)];
       }
-      return uniqueRowSelection;
+      return uniqueRowSelection.map((img) => ({
+        ...img,
+        url: img.url.includes("ik.imagekit.io")
+          ? `${img.url.split("?")[0]}?tr=w-500,q-75,f-auto`
+          : img.url,
+      }));
     };
+
     return {
       row1: generateRobustRow(),
       row2: generateRobustRow(),
       row3: generateRobustRow(),
       row4: generateRobustRow(),
     };
-  }, [imagesPool]);
-
-  // CDN Optimization tuning for massive stretched images
-  const slideshowImages = useMemo(() => {
-    const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
-    let pool = shuffleArray(base);
-    while (pool.length < 60) {
-      pool = [...pool, ...shuffleArray(base)];
-    }
-    return pool.slice(0, 80).map((img) => ({
-      ...img,
-      // Request higher quality (w-900, q-80) since images are physically larger on screen
-      url: img.url.includes("ik.imagekit.io")
-        ? `${img.url}?tr=w-900,q-80,f-auto`
-        : img.url,
-    }));
   }, [imagesPool]);
 
   const handleLearnMore = () => {
@@ -140,52 +135,9 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // ==========================================================
-  // LIGHTWEIGHT MASSIVE STRETCHED KIOSK SLIDESHOW VIEW
-  // ==========================================================
+  // Render the decoupled Kiosk component view directly
   if (currentView === "slideshow") {
-    return (
-      <div className="fixed inset-0 bg-black text-[#00ff41] overflow-hidden flex flex-col justify-between font-mono select-none z-50">
-        <div className="scanlines-overlay pointer-events-none" />
-        <div className="scanline-moving-bar pointer-events-none" />
-
-        {/* Minimalist Top Identity Bar */}
-        <div className="w-full bg-black border-b border-[#00ff41]/20 px-8 py-4 flex justify-between items-center z-10 text-xs tracking-widest text-[#84967e]">
-          <div className="flex items-center space-x-3">
-            <span className="w-2 h-2 bg-[#00ff41] rounded-full animate-ping" />
-            <span className="text-[#00ff41] font-bold">GLITCH BOOTH</span>
-          </div>
-          <div className="hidden sm:block font-bold text-[#00daf8]">
-            [ KIOSK_NODE_01 // LIVE_FEED ]
-          </div>
-        </div>
-
-        {/* Center Frame Container - Extended to fill maximum height */}
-        <div className="w-full h-[80vh] flex-1 flex items-center justify-center bg-black overflow-hidden relative">
-          {loading ? (
-            <div className="w-full text-center text-xs animate-pulse tracking-widest">
-              BUFFERING_STRETCHED_CDN_STREAM...
-            </div>
-          ) : (
-            <div className="w-full">
-              <GlitchMarqueeRow
-                images={slideshowImages}
-                direction="right"
-                speed={16} // Safe movement speed configuration for large frames
-                interactive={false}
-                sizeClassName="h-[74vh] aspect-square" // Forces images to fill 74% of viewport height perfectly square
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Minimalist Bottom Brand Identity Bar */}
-        <div className="w-full bg-black border-t border-[#00ff41]/20 px-8 py-4 flex justify-between items-center z-10 text-xs tracking-wider text-[#84967e]">
-          <div>GLITCHBOOTH.ONLINE</div>
-          <div className="uppercase">POWERED BY DIRTCAKE STUDIO</div>
-        </div>
-      </div>
-    );
+    return <Slideshow images={imagesPool} loading={loading} />;
   }
 
   return (
@@ -214,7 +166,6 @@ export default function App() {
                   id="gallery-section"
                   className="relative w-full min-h-[calc(100vh-80px)] min-h-[550px] md:min-h-[750px] overflow-hidden bg-black flex items-center justify-center border-b border-matrix/20"
                 >
-                  {/* BACKGROUND MARQUEES */}
                   <div
                     className={`absolute inset-0 z-0 flex flex-col justify-between py-2 transition-all duration-700 select-none ${
                       isHeroDismissed
@@ -252,13 +203,13 @@ export default function App() {
                     />
                   </div>
 
-                  {/* HERO DASHBOARD OVERLAY INTERCEPTOR */}
                   {!isHeroDismissed && (
                     <div
                       onClick={() => setIsHeroDismissed(true)}
                       className="absolute inset-0 z-20 flex items-center justify-center px-4 py-12 bg-black/20 cursor-pointer"
                     >
                       <div className="w-full max-w-3xl drop-shadow-[0_20px_40px_rgba(0,0,0,0.95)]">
+                        {/* Fixed Hero configuration using your required onClose property */}
                         <Hero
                           onLearnMoreClick={handleLearnMore}
                           onViewArchiveClick={handleViewArchive}

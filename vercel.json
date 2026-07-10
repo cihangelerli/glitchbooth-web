@@ -1,7 +1,13 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/p/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/slideshow",
       "destination": "/index.html"
     }
   ]
