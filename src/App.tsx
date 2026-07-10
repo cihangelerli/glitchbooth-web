@@ -15,18 +15,15 @@ export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isHeroDismissed, setIsHeroDismissed] = useState<boolean>(false);
+
+  // Persistent visibility toggle flag - stays across subcomponent view switching paths
+  const [isHeroVisible, setIsHeroVisible] = useState<boolean>(true);
 
   const [currentView, setCurrentView] = useState<
     "home" | "archive" | "details" | "slideshow"
   >(() => {
     const path = window.location.pathname;
-    const host = window.location.hostname;
-    if (
-      host.startsWith("slideshow.") ||
-      path === "/slideshow" ||
-      path === "/slideshow/"
-    ) {
+    if (path === "/slideshow" || path === "/slideshow/") {
       return "slideshow";
     }
     return "home";
@@ -94,21 +91,14 @@ export default function App() {
     initializeProjectData();
   }, []);
 
-  // Standard Main Site Marquee Optimizations (Keeps sizes responsive on modern phones)
   const backgroundRows = useMemo(() => {
     const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
-
     const generateRobustRow = () => {
       let uniqueRowSelection = shuffleArray(base);
       while (uniqueRowSelection.length < 12) {
         uniqueRowSelection = [...uniqueRowSelection, ...shuffleArray(base)];
       }
-      return uniqueRowSelection.map((img) => ({
-        ...img,
-        url: img.url.includes("ik.imagekit.io")
-          ? `${img.url.split("?")[0]}?tr=w-500,q-75,f-auto`
-          : img.url,
-      }));
+      return uniqueRowSelection;
     };
 
     return {
@@ -135,7 +125,6 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Render the decoupled Kiosk component view directly
   if (currentView === "slideshow") {
     return <Slideshow images={imagesPool} loading={loading} />;
   }
@@ -164,59 +153,59 @@ export default function App() {
               <>
                 <section
                   id="gallery-section"
-                  className="relative w-full min-h-[calc(100vh-80px)] min-h-[550px] md:min-h-[750px] overflow-hidden bg-black flex items-center justify-center border-b border-matrix/20"
+                  onClick={() => isHeroVisible && setIsHeroVisible(false)}
+                  className="relative w-full min-h-[calc(100vh-80px)] min-h-[550px] md:min-h-[750px] overflow-hidden bg-black flex items-center justify-center border-b border-matrix/20 px-4 py-12"
                 >
+                  {/* Background Sliding Tapes - Becomes interactive when Hero drops */}
                   <div
-                    className={`absolute inset-0 z-0 flex flex-col justify-between py-2 transition-all duration-700 select-none ${
-                      isHeroDismissed
-                        ? "opacity-100 pointer-events-auto"
-                        : "opacity-30 md:opacity-35 pointer-events-none"
+                    className={`absolute inset-0 z-0 flex flex-col justify-between py-2 transition-opacity duration-500 ${
+                      isHeroVisible
+                        ? "opacity-30 md:opacity-35 pointer-events-none"
+                        : "opacity-100"
                     }`}
                   >
                     <GlitchMarqueeRow
                       images={backgroundRows.row1}
                       direction="right"
                       speed={22}
-                      interactive={isHeroDismissed}
+                      interactive={!isHeroVisible}
                       onImageClick={handleSelectImageAndInspect}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row2}
                       direction="left"
                       speed={21}
-                      interactive={isHeroDismissed}
+                      interactive={!isHeroVisible}
                       onImageClick={handleSelectImageAndInspect}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row3}
                       direction="right"
                       speed={23}
-                      interactive={isHeroDismissed}
+                      interactive={!isHeroVisible}
                       onImageClick={handleSelectImageAndInspect}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row4}
                       direction="left"
                       speed={24}
-                      interactive={isHeroDismissed}
+                      interactive={!isHeroVisible}
                       onImageClick={handleSelectImageAndInspect}
                     />
                   </div>
 
-                  {!isHeroDismissed && (
+                  {/* Hero Container Box */}
+                  {isHeroVisible && (
                     <div
-                      onClick={() => setIsHeroDismissed(true)}
-                      className="absolute inset-0 z-20 flex items-center justify-center px-4 py-12 bg-black/20 cursor-pointer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="relative z-10 w-full max-w-3xl drop-shadow-[0_20px_40px_rgba(0,0,0,0.98)] shadow-black/15"
                     >
-                      <div className="w-full max-w-3xl drop-shadow-[0_20px_40px_rgba(0,0,0,0.95)]">
-                        {/* Fixed Hero configuration using your required onClose property */}
-                        <Hero
-                          onLearnMoreClick={handleLearnMore}
-                          onViewArchiveClick={handleViewArchive}
-                          onRandomizeClick={handleRandomizeImages}
-                          onClose={() => setIsHeroDismissed(true)}
-                        />
-                      </div>
+                      <Hero
+                        onLearnMoreClick={handleLearnMore}
+                        onViewArchiveClick={handleViewArchive}
+                        onRandomizeClick={handleRandomizeImages}
+                        onClose={() => setIsHeroVisible(false)}
+                      />
                     </div>
                   )}
                 </section>
