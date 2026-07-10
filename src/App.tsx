@@ -12,13 +12,20 @@ import { GalleryImage } from "./types";
 
 export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
-  const [currentView, setCurrentView] = useState<
-    "home" | "archive" | "details"
-  >("home");
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isHeroDismissed, setIsHeroDismissed] = useState<boolean>(false);
 
-  // Reusable Fisher-Yates array randomizer
+  // Set initial view state instantly from URL layout
+  const [currentView, setCurrentView] = useState<
+    "home" | "archive" | "details" | "slideshow"
+  >(() => {
+    const path = window.location.pathname;
+    return path === "/slideshow" || path === "/slideshow/"
+      ? "slideshow"
+      : "home";
+  });
+
   const shuffleArray = (array: GalleryImage[]): GalleryImage[] => {
     const scrambled = [...array];
     for (let i = scrambled.length - 1; i > 0; i--) {
@@ -28,13 +35,13 @@ export default function App() {
     return scrambled;
   };
 
-  // Shuffles your live image pool on command
   const handleRandomizeImages = () => {
     setImagesPool((prevImages) => shuffleArray(prevImages));
   };
 
   useEffect(() => {
     async function initializeProjectData() {
+      const path = window.location.pathname;
       let activePool = STOCK_GALLERY_IMAGES;
 
       try {
@@ -42,7 +49,6 @@ export default function App() {
         if (response.ok) {
           const liveData = await response.json();
           if (liveData && liveData.length > 0) {
-            // Shuffle immediately on initial load so it never looks stale
             const randomizedLoad = shuffleArray(liveData);
             activePool = randomizedLoad;
             setImagesPool(randomizedLoad);
@@ -53,49 +59,20 @@ export default function App() {
           "ImageKit sync failed, falling back to stock assets:",
           err,
         );
-        // Shuffle stock assets on fallback failure too
         setImagesPool(shuffleArray(STOCK_GALLERY_IMAGES));
       } finally {
         setLoading(false);
       }
 
-      // QR CODE / DEEP LINK INTERCEPTION LOOP
-      const path = window.location.pathname;
       if (path.startsWith("/p/")) {
         const photoId = path.split("/p/")[1];
-
         if (photoId) {
           const existingMatch = activePool.find((img) => img.id === photoId);
-
           if (existingMatch) {
             setSelectedImage(existingMatch);
           } else {
             const cleanId = photoId.replace("_color", "");
             let derivedTimestamp = "2026-06-03 00:00:00";
-
-            if (/^\d+$/.test(cleanId)) {
-              const date = new Date(parseInt(cleanId, 10));
-              if (!isNaN(date.getTime())) {
-                const yyyy = date.getFullYear();
-                const mm = String(date.getMonth() + 1).padStart(2, "0");
-                const dd = String(date.getDate()).padStart(2, "0");
-                const hh = String(date.getHours()).padStart(2, "0");
-                const min = String(date.getMinutes()).padStart(2, "0");
-                const ss = String(date.getSeconds()).padStart(2, "0");
-                derivedTimestamp = `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
-              }
-            } else {
-              const parts = cleanId.split("_");
-              if (
-                parts.length === 2 &&
-                parts[0].length === 8 &&
-                parts[1].length === 6
-              ) {
-                const d = parts[0];
-                const t = parts[1];
-                derivedTimestamp = `${d.substring(0, 4)}-${d.substring(4, 6)}-${d.substring(6, 8)} ${t.substring(0, 2)}:${t.substring(2, 4)}:${t.substring(4, 6)}`;
-              }
-            }
 
             const deepLinkedImage = {
               id: photoId,
@@ -106,7 +83,6 @@ export default function App() {
             } as GalleryImage;
             setSelectedImage(deepLinkedImage);
           }
-
           setCurrentView("details");
         }
       }
@@ -115,22 +91,15 @@ export default function App() {
     initializeProjectData();
   }, []);
 
-  // DYNAMIC BACKGROUND GENERATOR MATRIX
-  // Prevents reshuffling on every component text change, but fills gaps perfectly
   const backgroundRows = useMemo(() => {
     const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
-
     const generateRobustRow = () => {
       let uniqueRowSelection = shuffleArray(base);
-
-      // If the asset pool size is small, keep merging shuffled variations
-      // to ensure the width overflows the screen edge flawlessly
       while (uniqueRowSelection.length < 12) {
         uniqueRowSelection = [...uniqueRowSelection, ...shuffleArray(base)];
       }
       return uniqueRowSelection;
     };
-
     return {
       row1: generateRobustRow(),
       row2: generateRobustRow(),
@@ -139,11 +108,25 @@ export default function App() {
     };
   }, [imagesPool]);
 
+  // CDN Optimization tuning for massive stretched images
+  const slideshowImages = useMemo(() => {
+    const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
+    let pool = shuffleArray(base);
+    while (pool.length < 60) {
+      pool = [...pool, ...shuffleArray(base)];
+    }
+    return pool.slice(0, 80).map((img) => ({
+      ...img,
+      // Request higher quality (w-900, q-80) since images are physically larger on screen
+      url: img.url.includes("ik.imagekit.io")
+        ? `${img.url}?tr=w-900,q-80,f-auto`
+        : img.url,
+    }));
+  }, [imagesPool]);
+
   const handleLearnMore = () => {
     const element = document.getElementById("about-section");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleViewArchive = () => {
@@ -156,6 +139,54 @@ export default function App() {
     setCurrentView("details");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // ==========================================================
+  // LIGHTWEIGHT MASSIVE STRETCHED KIOSK SLIDESHOW VIEW
+  // ==========================================================
+  if (currentView === "slideshow") {
+    return (
+      <div className="fixed inset-0 bg-black text-[#00ff41] overflow-hidden flex flex-col justify-between font-mono select-none z-50">
+        <div className="scanlines-overlay pointer-events-none" />
+        <div className="scanline-moving-bar pointer-events-none" />
+
+        {/* Minimalist Top Identity Bar */}
+        <div className="w-full bg-black border-b border-[#00ff41]/20 px-8 py-4 flex justify-between items-center z-10 text-xs tracking-widest text-[#84967e]">
+          <div className="flex items-center space-x-3">
+            <span className="w-2 h-2 bg-[#00ff41] rounded-full animate-ping" />
+            <span className="text-[#00ff41] font-bold">GLITCH BOOTH</span>
+          </div>
+          <div className="hidden sm:block font-bold text-[#00daf8]">
+            [ KIOSK_NODE_01 // LIVE_FEED ]
+          </div>
+        </div>
+
+        {/* Center Frame Container - Extended to fill maximum height */}
+        <div className="w-full h-[80vh] flex-1 flex items-center justify-center bg-black overflow-hidden relative">
+          {loading ? (
+            <div className="w-full text-center text-xs animate-pulse tracking-widest">
+              BUFFERING_STRETCHED_CDN_STREAM...
+            </div>
+          ) : (
+            <div className="w-full">
+              <GlitchMarqueeRow
+                images={slideshowImages}
+                direction="right"
+                speed={16} // Safe movement speed configuration for large frames
+                interactive={false}
+                sizeClassName="h-[74vh] aspect-square" // Forces images to fill 74% of viewport height perfectly square
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Minimalist Bottom Brand Identity Bar */}
+        <div className="w-full bg-black border-t border-[#00ff41]/20 px-8 py-4 flex justify-between items-center z-10 text-xs tracking-wider text-[#84967e]">
+          <div>GLITCHBOOTH.ONLINE</div>
+          <div className="uppercase">POWERED BY DIRTCAKE STUDIO</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -181,44 +212,62 @@ export default function App() {
               <>
                 <section
                   id="gallery-section"
-                  className="relative w-full min-h-[calc(100vh-80px)] min-h-[550px] md:min-h-[750px] overflow-hidden bg-black flex items-center justify-center border-b border-matrix/20 px-4 py-12"
+                  className="relative w-full min-h-[calc(100vh-80px)] min-h-[550px] md:min-h-[750px] overflow-hidden bg-black flex items-center justify-center border-b border-matrix/20"
                 >
                   {/* BACKGROUND MARQUEES */}
-                  <div className="absolute inset-0 z-0 flex flex-col justify-between py-2 opacity-30 md:opacity-35 select-none pointer-events-none">
+                  <div
+                    className={`absolute inset-0 z-0 flex flex-col justify-between py-2 transition-all duration-700 select-none ${
+                      isHeroDismissed
+                        ? "opacity-100 pointer-events-auto"
+                        : "opacity-30 md:opacity-35 pointer-events-none"
+                    }`}
+                  >
                     <GlitchMarqueeRow
                       images={backgroundRows.row1}
                       direction="right"
-                      speed={22} // 16 seconds pacing per image segment
-                      interactive={false}
+                      speed={22}
+                      interactive={isHeroDismissed}
+                      onImageClick={handleSelectImageAndInspect}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row2}
                       direction="left"
-                      speed={21} // Slightly different to keep rows unsynced
-                      interactive={false}
+                      speed={21}
+                      interactive={isHeroDismissed}
+                      onImageClick={handleSelectImageAndInspect}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row3}
                       direction="right"
                       speed={23}
-                      interactive={false}
+                      interactive={isHeroDismissed}
+                      onImageClick={handleSelectImageAndInspect}
                     />
                     <GlitchMarqueeRow
                       images={backgroundRows.row4}
                       direction="left"
                       speed={24}
-                      interactive={false}
+                      interactive={isHeroDismissed}
+                      onImageClick={handleSelectImageAndInspect}
                     />
                   </div>
 
-                  {/* HERO DASHBOARD */}
-                  <div className="relative z-10 w-full max-w-3xl drop-shadow-[0_20px_40px_rgba(0,0,0,0.98)] shadow-black/15">
-                    <Hero
-                      onLearnMoreClick={handleLearnMore}
-                      onViewArchiveClick={handleViewArchive}
-                      onRandomizeClick={handleRandomizeImages}
-                    />
-                  </div>
+                  {/* HERO DASHBOARD OVERLAY INTERCEPTOR */}
+                  {!isHeroDismissed && (
+                    <div
+                      onClick={() => setIsHeroDismissed(true)}
+                      className="absolute inset-0 z-20 flex items-center justify-center px-4 py-12 bg-black/20 cursor-pointer"
+                    >
+                      <div className="w-full max-w-3xl drop-shadow-[0_20px_40px_rgba(0,0,0,0.95)]">
+                        <Hero
+                          onLearnMoreClick={handleLearnMore}
+                          onViewArchiveClick={handleViewArchive}
+                          onRandomizeClick={handleRandomizeImages}
+                          onClose={() => setIsHeroDismissed(true)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </section>
 
                 <Specs />
