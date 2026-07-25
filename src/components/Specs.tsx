@@ -190,9 +190,9 @@ export default function Specs() {
             </h4>
             <p className="font-mono text-xs sm:text-sm text-[#e2e2e2] leading-relaxed">
               GLITCH BOOTH is an experimental digital installation designed to
-              explore the aesthetics of technology in states of distress.
-              Gitchbooth doesn't just take photos; it documents the digital
-              ghost in the machine in a little urban artifact...
+              explore the aesthetics of technology in states of distress. Glitch
+              Booth doesn't just take photos; it documents the digital ghost in
+              the machine in a little urban artifact...
             </p>
             <p className="font-mono text-xs sm:text-sm text-[#e2e2e2] leading-relaxed">
               GLITCH BOOTH is powered by{" "}
