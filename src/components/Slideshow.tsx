@@ -82,7 +82,7 @@ export default function Slideshow({ images, loading }: SlideshowProps) {
               {loopTrack.map((img, idx) => (
                 <div
                   key={`kiosk-${img.id}-${idx}`}
-                  className="relative shrink-0 w-[65vh] h-[65vh] aspect-square border border-[#3b4b37] bg-[#0c0c0c] overflow-hidden"
+                  className="relative shrink-0 h-[65vh] w-auto border border-[#3b4b37] bg-[#0c0c0c] overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none z-1" />
                   <img
@@ -91,7 +91,7 @@ export default function Slideshow({ images, loading }: SlideshowProps) {
                     referrerPolicy="no-referrer"
                     loading="eager"
                     decoding="async"
-                    className="w-full h-full object-cover"
+                    className="w-auto h-full object-contain"
                   />
                 </div>
               ))}
