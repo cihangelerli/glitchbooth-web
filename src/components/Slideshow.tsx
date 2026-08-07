@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { GalleryImage } from "../types";
 
 interface SlideshowProps {
@@ -14,9 +14,16 @@ const STATIC_SLIDESHOW_CSS = `
   }
 `;
 
+interface SizedImage extends GalleryImage {
+  aspectRatio?: number;
+}
+
 export default function Slideshow({ images, loading }: SlideshowProps) {
-  // Optimize raw source resolutions down to target physical canvas constraints
-  const optimizedImages = useMemo(() => {
+  const [sizedImages, setSizedImages] = useState<SizedImage[]>([]);
+  const [isPreloaded, setIsPreloaded] = useState(false);
+
+  // 1. Prepare raw source set
+  const baseList = useMemo(() => {
     if (!images || images.length === 0) return [];
     const scrambled = [...images].sort(() => Math.random() - 0.5);
     return scrambled.map((img) => ({
@@ -27,16 +34,54 @@ export default function Slideshow({ images, loading }: SlideshowProps) {
     }));
   }, [images]);
 
-  // Restrict track node footprint safely to avoid hardware memory leaks
+  // 2. Pre-calculate natural aspect ratios BEFORE mounting animation track
+  useEffect(() => {
+    if (baseList.length === 0) {
+      setSizedImages([]);
+      setIsPreloaded(false);
+      return;
+    }
+
+    let isMounted = true;
+    let selected = [...baseList];
+    if (selected.length > 8) selected = selected.slice(0, 8);
+
+    Promise.all(
+      selected.map(
+        (img) =>
+          new Promise<SizedImage>((resolve) => {
+            const i = new Image();
+            i.onload = () => {
+              resolve({
+                ...img,
+                aspectRatio: i.naturalWidth / i.naturalHeight || 1,
+              });
+            };
+            i.onerror = () => resolve({ ...img, aspectRatio: 1 });
+            i.src = img.url;
+          }),
+      ),
+    ).then((results) => {
+      if (isMounted) {
+        setSizedImages(results);
+        setIsPreloaded(true);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [baseList]);
+
+  // 3. Build track with locked dimensions
   const loopTrack = useMemo(() => {
-    if (optimizedImages.length === 0) return [];
-    let track = [...optimizedImages];
-    if (track.length > 8) track = track.slice(0, 8);
+    if (sizedImages.length === 0) return [];
+    let track = [...sizedImages];
     while (track.length < 6) {
-      track = [...track, ...optimizedImages];
+      track = [...track, ...sizedImages];
     }
     return [...track, ...track];
-  }, [optimizedImages]);
+  }, [sizedImages]);
 
   const movementDuration = loopTrack.length * 3.5;
 
@@ -58,7 +103,7 @@ export default function Slideshow({ images, loading }: SlideshowProps) {
 
       {/* Primary Display Vector */}
       <div className="w-full h-[80vh] flex-1 flex items-center justify-center bg-black overflow-hidden relative">
-        {loading || loopTrack.length === 0 ? (
+        {loading || !isPreloaded || loopTrack.length === 0 ? (
           <div className="w-full text-center text-[10px] tracking-widest animate-pulse">
             INITIALIZING_HARDWARE_BUFFER...
           </div>
@@ -82,7 +127,8 @@ export default function Slideshow({ images, loading }: SlideshowProps) {
               {loopTrack.map((img, idx) => (
                 <div
                   key={`kiosk-${img.id}-${idx}`}
-                  className="relative shrink-0 h-[65vh] w-auto border border-[#3b4b37] bg-[#0c0c0c] overflow-hidden"
+                  style={{ aspectRatio: img.aspectRatio }}
+                  className="relative shrink-0 h-[65vh] border border-[#3b4b37] bg-[#0c0c0c] overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none z-10" />
                   <img
@@ -91,7 +137,7 @@ export default function Slideshow({ images, loading }: SlideshowProps) {
                     referrerPolicy="no-referrer"
                     loading="eager"
                     decoding="async"
-                    className="h-full w-auto block object-cover"
+                    className="w-full h-full object-cover block"
                   />
                 </div>
               ))}
