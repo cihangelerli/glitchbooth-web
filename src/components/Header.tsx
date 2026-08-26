@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Menu, X, Instagram } from "lucide-react";
+import { Menu, X, Instagram, Github } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface HeaderProps {
@@ -92,6 +92,16 @@ export default function Header({ currentView, setView }: HeaderProps) {
         {/* Right Action Icons */}
         <div className="hidden md:flex items-center space-x-4">
           <a
+            href="https://github.com/cihangelerli/glitchbooth"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 border border-matrix/20 text-[#00ff41] hover:text-black hover:bg-[#00ff41] hover:shadow-[0_0_12px_rgba(0,255,65,0.4)] transition-all duration-300 flex items-center justify-center cursor-pointer"
+            style={{ borderRadius: "0px" }}
+            title="GitHub"
+          >
+            <Github size={16} />
+          </a>
+          <a
             href="https://instagram.com/glitchbooth.online"
             target="_blank"
             rel="noopener noreferrer"
@@ -105,6 +115,16 @@ export default function Header({ currentView, setView }: HeaderProps) {
 
         {/* Mobile Toggle Button */}
         <div className="md:hidden flex items-center space-x-3">
+          <a
+            href="https://github.com/cihangelerli/glitchbooth"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-2 border border-matrix/20 text-[#00ff41] hover:text-black hover:bg-[#00ff41] hover:shadow-[0_0_12px_rgba(0,255,65,0.4)] transition-all duration-300 flex items-center justify-center cursor-pointer"
+            style={{ borderRadius: "0px" }}
+            title="GitHub"
+          >
+            <Github size={15} />
+          </a>
           <a
             href="https://instagram.com"
             target="_blank"
