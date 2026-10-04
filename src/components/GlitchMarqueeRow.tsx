@@ -42,7 +42,9 @@ export default function GlitchMarqueeRow({
           const imageLabel =
             img.filename || (img as any).name || `CAPTURE_${img.id}`;
           const glitchPct =
-            (img as any).glitchLevel ?? Math.floor(Math.random() * 35) + 15;
+            img.glitchLevel ??
+            (parseInt(img.id.replace(/\D/g, "").slice(-2) || "50", 10) % 35) +
+              15;
 
           return (
             <div

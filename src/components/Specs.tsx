@@ -31,13 +31,13 @@ export default function Specs() {
 
   // Trigger loading lines only when visible on screen
   useEffect(() => {
-    if (isInView) {
-      initialConsoleLines.forEach((line) => {
-        setTimeout(() => {
-          setActiveLines((prev) => [...prev, line]);
-        }, line.delay);
-      });
-    }
+    if (!isInView) return;
+    const timers = initialConsoleLines.map((line) =>
+      setTimeout(() => {
+        setActiveLines((prev) => [...prev, line]);
+      }, line.delay),
+    );
+    return () => timers.forEach(clearTimeout);
   }, [isInView]);
 
   return (

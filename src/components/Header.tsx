@@ -21,11 +21,13 @@ export default function Header({ currentView, setView }: HeaderProps) {
     setIsOpen(false);
     if (target === "archive") {
       setView("archive");
+      window.history.pushState({ view: "archive" }, "", "/archive");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       // It's a landing page section scroll
       if (currentView !== "home") {
         setView("home");
+        window.history.pushState({ view: "home" }, "", "/"); // Keeps URL updated to '/' when leaving archive or details
         setTimeout(() => {
           const element = document.getElementById(target);
           if (element) {
@@ -43,6 +45,7 @@ export default function Header({ currentView, setView }: HeaderProps) {
 
   const handleLogoClick = () => {
     setView("home");
+    window.history.pushState({ view: "home" }, "", "/");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -126,11 +129,12 @@ export default function Header({ currentView, setView }: HeaderProps) {
             <Github size={15} />
           </a>
           <a
-            href="https://instagram.com"
+            href="https://instagram.com/glitchbooth.online"
             target="_blank"
             rel="noopener noreferrer"
-            className="p-2 border border-matrix/20 text-[#00ff41] flex items-center justify-center"
+            className="p-2 border border-matrix/20 text-[#00ff41] hover:text-black hover:bg-[#00ff41] hover:shadow-[0_0_12px_rgba(0,255,65,0.4)] transition-all duration-300 flex items-center justify-center cursor-pointer"
             style={{ borderRadius: "0px" }}
+            title="Instagram"
           >
             <Instagram size={15} />
           </a>

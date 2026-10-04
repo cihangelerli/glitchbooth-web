@@ -37,7 +37,7 @@ export default function StatsDashboard() {
         const baseUrl = "https://ik.imagekit.io/w6lsfsw8j/telemetry/stats.json"; // DEPLOY
 
         // SURGICAL TWEAK: Append a dynamic timestamp parameter (?t=...)
-        // This forces the CDN and browser to pull the fresh file instantly every 5 minutes.
+        // This forces the CDN and browser to bypass cache on every fetch.
         const response = await fetch(`${baseUrl}?t=${Date.now()}`);
 
         if (!response.ok) {
@@ -64,16 +64,13 @@ export default function StatsDashboard() {
 
   const formatTimestamp = (isoString: string | null) => {
     if (!isoString) return "NO_RECORDS_FOUND";
-    try {
-      const date = new Date(isoString);
-      return (
-        date.toLocaleTimeString("en-US", { hour12: false }) +
-        " " +
-        date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" })
-      );
-    } catch {
-      return "TIME_PARSE_FAULT";
-    }
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return "TIME_PARSE_FAULT";
+    return (
+      date.toLocaleTimeString("en-US", { hour12: false }) +
+      " " +
+      date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" })
+    );
   };
 
   const totalUploads = data ? data.successful_uploads + data.failed_uploads : 0;
@@ -108,12 +105,10 @@ export default function StatsDashboard() {
 
       {error && !loading && (
         <div className="border border-magenta/30 bg-black/50 font-mono text-xs text-[#fe00fe] tracking-wider p-6">
-          [!] ERROR: TELEMETRY_MATRIX_OFFLINE // FILE_NOT_FOUND_IN_PUBLIC_DIR
+          [!] ERROR: TELEMETRY_MATRIX_OFFLINE // CDN_UNREACHABLE
           <div className="text-[10px] text-magenta/60 mt-2 normal-case font-sans">
-            Ensure your file is placed exactly at:{" "}
-            <code className="bg-black px-1 py-0.5 border border-magenta/20 font-mono">
-              public/stats.json
-            </code>
+            Could not reach ImageKit telemetry CDN. Stats will retry
+            automatically.
           </div>
         </div>
       )}

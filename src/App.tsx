@@ -22,12 +22,33 @@ export default function App() {
   const [currentView, setCurrentView] = useState<
     "home" | "archive" | "details" | "slideshow"
   >(() => {
-    const path = window.location.pathname;
-    if (path === "/slideshow" || path === "/slideshow/") {
-      return "slideshow";
-    }
+    const path = window.location.pathname.replace(/\/$/, "");
+    if (path === "/slideshow") return "slideshow";
+    if (path === "/archive") return "archive";
+    if (path.startsWith("/p/")) return "details";
     return "home";
   });
+
+  // Centralized router function that pairs React state updates with window.history
+  const navigateTo = (
+    view: "home" | "archive" | "details" | "slideshow",
+    path: string,
+    image: GalleryImage | null = null,
+    replace: boolean = false,
+  ) => {
+    setCurrentView(view);
+    setSelectedImage(image);
+
+    if (window.location.pathname !== path) {
+      if (replace) {
+        window.history.replaceState({ view, id: image?.id }, "", path);
+      } else {
+        window.history.pushState({ view, id: image?.id }, "", path);
+      }
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const shuffleArray = (array: GalleryImage[]): GalleryImage[] => {
     const scrambled = [...array];
@@ -49,20 +70,24 @@ export default function App() {
 
       try {
         const response = await fetch("/api/images");
-        if (response.ok) {
-          const liveData = await response.json();
-          if (liveData && liveData.length > 0) {
-            const randomizedLoad = shuffleArray(liveData);
-            activePool = randomizedLoad;
-            setImagesPool(randomizedLoad);
-          }
-        }
+        const liveData = response.ok
+          ? await response.json().catch(() => null)
+          : null;
+        const pool =
+          Array.isArray(liveData) && liveData.length > 0
+            ? liveData
+            : STOCK_GALLERY_IMAGES;
+        const randomizedLoad = shuffleArray(pool);
+        activePool = randomizedLoad;
+        setImagesPool(randomizedLoad);
       } catch (err) {
         console.error(
           "ImageKit sync failed, falling back to stock assets:",
           err,
         );
-        setImagesPool(shuffleArray(STOCK_GALLERY_IMAGES));
+        const fallback = shuffleArray(STOCK_GALLERY_IMAGES);
+        activePool = fallback;
+        setImagesPool(fallback);
       } finally {
         setLoading(false);
       }
@@ -91,6 +116,48 @@ export default function App() {
     initializeProjectData();
   }, []);
 
+  // Synchronize URL path with React state on mount, image pool updates, and browser popstate navigation
+  useEffect(() => {
+    const syncViewWithUrl = () => {
+      const path = window.location.pathname.replace(/\/$/, ""); // Strip trailing slash
+
+      if (path === "/archive") {
+        setCurrentView("archive");
+        setSelectedImage(null);
+      } else if (path.startsWith("/p/")) {
+        const photoId = path.split("/p/")[1];
+        if (photoId) {
+          const match = imagesPool.find((img) => img.id === photoId);
+          if (match) {
+            setSelectedImage(match);
+          } else {
+            // Fallback object while imagesPool loads or if ID is missing from live pool
+            setSelectedImage({
+              id: photoId,
+              url: `https://ik.imagekit.io/w6lsfsw8j/booth_captures/${photoId}_color.jpg`,
+              filename: `${photoId}_color.jpg`,
+              title: `CAPTURE_${photoId}`,
+              timestamp: new Date().toISOString(),
+            } as GalleryImage);
+          }
+          setCurrentView("details");
+        }
+      } else if (path === "/slideshow") {
+        setCurrentView("slideshow");
+        setSelectedImage(null);
+      } else {
+        setCurrentView("home");
+        setSelectedImage(null);
+      }
+    };
+
+    // Run synchronization immediately on load/data hydration
+    syncViewWithUrl();
+
+    window.addEventListener("popstate", syncViewWithUrl);
+    return () => window.removeEventListener("popstate", syncViewWithUrl);
+  }, [imagesPool]);
+
   const backgroundRows = useMemo(() => {
     const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
     const generateRobustRow = () => {
@@ -114,15 +181,16 @@ export default function App() {
     if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const handleViewHome = () => {
+    navigateTo("home", "/");
+  };
+
   const handleViewArchive = () => {
-    setCurrentView("archive");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigateTo("archive", "/archive");
   };
 
   const handleSelectImageAndInspect = (img: GalleryImage) => {
-    setSelectedImage(img);
-    setCurrentView("details");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    navigateTo("details", `/p/${img.id}`, img);
   };
 
   if (currentView === "slideshow") {
@@ -220,7 +288,7 @@ export default function App() {
               <ArchiveView
                 images={imagesPool}
                 onImageSelect={handleSelectImageAndInspect}
-                onBackToHome={() => setCurrentView("home")}
+                onBackToHome={handleViewHome}
                 onRandomize={handleRandomizeImages}
               />
             )}
@@ -228,8 +296,8 @@ export default function App() {
             {currentView === "details" && selectedImage && (
               <DetailsView
                 image={selectedImage}
-                onBackToArchive={() => setCurrentView("archive")}
-                onBackToHome={() => setCurrentView("home")}
+                onBackToArchive={handleViewArchive}
+                onBackToHome={handleViewHome}
               />
             )}
           </>

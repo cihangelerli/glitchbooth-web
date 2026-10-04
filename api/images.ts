@@ -38,10 +38,10 @@ export default async function handler(req: any, res: any) {
       return {
         id: cleanId,
         url: file.url,
-        name: file.name,
+        filename: file.name,
         title: `CAPTURE_${cleanId}`,
-        date: file.createdAt.split("T")[0], // extracts YYYY-MM-DD for UI text components
-        timestamp: file.createdAt, // PRESERVES HIGH-PRECISION TIME: Full ISO string for exact sorting
+        date: file.createdAt.split("T")[0],
+        timestamp: file.createdAt,
       };
     });
 

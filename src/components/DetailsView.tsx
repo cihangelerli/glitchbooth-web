@@ -9,63 +9,44 @@ interface DetailsViewProps {
   onBackToHome: () => void;
 }
 
-// Robust helper to extract readable dates from both epoch timestamps and legacy strings
-function parseDynamicTimestamp(id: string): string {
-  if (!id) return "UNKNOWN TIMESTAMP";
-  const cleanId = id.replace("_color", "");
-
-  if (/^\d+$/.test(cleanId)) {
-    const ms = parseInt(cleanId, 10);
-    const date = new Date(ms);
+// Formats authoritative ISO timestamp into UTC string with safety fallback
+function formatCaptureTimestamp(
+  isoString?: string,
+  fallbackId?: string,
+): string {
+  if (isoString) {
+    const date = new Date(isoString);
     if (!isNaN(date.getTime())) {
-      const readable = date
-        .toLocaleDateString("en-US", {
-          month: "short",
-          day: "2-digit",
-          year: "numeric",
-        })
-        .toUpperCase();
-      const time = date.toTimeString().split(" ")[0];
-      return `${readable} // ${time} UTC`;
+      const months = [
+        "JAN",
+        "FEB",
+        "MAR",
+        "APR",
+        "MAY",
+        "JUN",
+        "JUL",
+        "AUG",
+        "SEP",
+        "OCT",
+        "NOV",
+        "DEC",
+      ];
+      const month = months[date.getUTCMonth()];
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      const year = date.getUTCFullYear();
+      const hours = String(date.getUTCHours()).padStart(2, "0");
+      const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+      const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+      return `${month} ${day}, ${year} // ${hours}:${minutes}:${seconds} UTC`;
     }
   }
-
-  const parts = cleanId.split("_");
-  if (parts.length === 2 && parts[0].length === 8 && parts[1].length === 6) {
-    const dateStr = parts[0];
-    const timeStr = parts[1];
-    const year = dateStr.substring(0, 4);
-    const monthNum = parseInt(dateStr.substring(4, 6), 10);
-    const day = dateStr.substring(6, 8);
-    const hours = timeStr.substring(0, 2);
-    const minutes = timeStr.substring(2, 4);
-    const seconds = timeStr.substring(4, 6);
-
-    const months = [
-      "JAN",
-      "FEB",
-      "MAR",
-      "APR",
-      "MAY",
-      "JUN",
-      "JUL",
-      "AUG",
-      "SEP",
-      "OCT",
-      "NOV",
-      "DEC",
-    ];
-    if (monthNum >= 1 && monthNum <= 12) {
-      return `${months[monthNum - 1]} ${day}, ${year} // ${hours}:${minutes}:${seconds} UTC`;
-    }
-  }
-
-  return "LIVE_STREAM // NODE_CONNECTED";
+  return fallbackId ? `CAPTURE_${fallbackId}` : "TIMESTAMP_UNAVAILABLE";
 }
 
 export default function DetailsView({
   image,
   onBackToArchive,
+  onBackToHome,
 }: DetailsViewProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -83,7 +64,7 @@ export default function DetailsView({
 
   const fileName = image.filename || `${image.id}.JPG`;
   const downloadFileName = image.filename || `${image.id}.jpg`;
-  const dynamicTimestamp = parseDynamicTimestamp(image.id);
+  const dynamicTimestamp = formatCaptureTimestamp(image.timestamp, image.id);
 
   // --- MOBILE TRACK: Native System Share Sheet Handler ---
   const handleMobileShare = async () => {
