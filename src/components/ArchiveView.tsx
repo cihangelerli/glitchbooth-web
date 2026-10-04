@@ -125,7 +125,7 @@ export default function ArchiveView({
           <h1 className="font-display text-2xl md:text-3xl font-extrabold text-[#00ff41] flex items-center space-x-2">
             <span className="glow-text-matrix">~/GLITCH_BOOTH/ARCHIVE</span>
             <span className="text-[10px] bg-matrix/10 border border-matrix/20 text-[#00ff41] font-mono px-2 py-0.5 ml-2">
-              {captureCountLabel} CAPTURES
+              {captureCountLabel}
             </span>
           </h1>
         </div>
