@@ -11,6 +11,7 @@ import { GalleryImage } from "../types";
 
 interface ArchiveViewProps {
   images: GalleryImage[];
+  hasMoreCaptures: boolean;
   onImageSelect: (img: GalleryImage) => void;
   onBackToHome: () => void;
   onRandomize: () => void;
@@ -18,6 +19,7 @@ interface ArchiveViewProps {
 
 export default function ArchiveView({
   images,
+  hasMoreCaptures,
   onImageSelect,
   onBackToHome,
   onRandomize,
@@ -96,6 +98,14 @@ export default function ArchiveView({
     return 0;
   });
 
+  const isFiltering = searchQuery.trim().length > 0 || dateFilter !== "all";
+
+  const captureCountLabel = isFiltering
+    ? `${sortedAndFilteredImages.length} MATCHES`
+    : hasMoreCaptures
+      ? "1000+ CAPTURES"
+      : `${images.length} CAPTURES`;
+
   return (
     <div className="w-full max-w-[1200px] mx-auto px-4 py-8 select-none">
       {/* Dynamic Navigation Path & Title */}
@@ -115,7 +125,7 @@ export default function ArchiveView({
           <h1 className="font-display text-2xl md:text-3xl font-extrabold text-[#00ff41] flex items-center space-x-2">
             <span className="glow-text-matrix">~/GLITCH_BOOTH/ARCHIVE</span>
             <span className="text-[10px] bg-matrix/10 border border-matrix/20 text-[#00ff41] font-mono px-2 py-0.5 ml-2">
-              {sortedAndFilteredImages.length} CAPTURES
+              {captureCountLabel} CAPTURES
             </span>
           </h1>
         </div>

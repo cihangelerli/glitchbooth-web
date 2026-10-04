@@ -79,6 +79,18 @@ export default function StatsDashboard() {
       ? Math.round((data.successful_uploads / totalUploads) * 100)
       : 100;
 
+  const mostPopularEffect = data
+    ? Object.entries(data.effects_popularity ?? {})
+        .sort(
+          ([firstKey, firstValue], [secondKey, secondValue]) =>
+            secondValue - firstValue || firstKey.localeCompare(secondKey),
+        )
+        .find(([, percentage]) => percentage > 0)
+    : undefined;
+
+  const formatEffectLabel = (key: string) =>
+    key.replace("_usage_pct", "").replace(/_/g, " ").toUpperCase();
+
   return (
     // FIX: The ID is now placed on this persistent outer section tag.
     // Navigation will now slide here smoothly regardless of loading or error state loops.
@@ -220,7 +232,9 @@ export default function StatsDashboard() {
                   // DOMINANT_ALGORITHM_PROFILE
                 </h4>
                 <div className="text-sm font-bold text-white uppercase tracking-wide leading-snug border-b border-matrix/10 pb-3">
-                  {data.most_popular_combo || "RAW_CAPTURE_FLOW"}
+                  {mostPopularEffect
+                    ? formatEffectLabel(mostPopularEffect[0])
+                    : "NO_EFFECT_DATA"}
                 </div>
 
                 <div className="space-y-2 pt-2 text-[11px]">

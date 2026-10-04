@@ -14,27 +14,35 @@ export default async function handler(req: any, res: any) {
     // 2. Generate the Basic Authentication header ImageKit expects
     const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
 
-    // Fetch only images inside your booth_captures folder, sorted by newest first
-    const imagekitResponse = await fetch(
-      `${urlEndpoint}?path=/booth_captures/&sort=DESC_CREATED`,
-      {
+    const fetchFiles = async (skip: number, limit: number) => {
+      const query = new URLSearchParams({
+        path: "/booth_captures/",
+        sort: "DESC_CREATED",
+        skip: String(skip),
+        limit: String(limit),
+      });
+
+      const response = await fetch(`${urlEndpoint}?${query}`, {
         headers: {
           Authorization: `Basic ${base64Auth}`,
         },
-      },
-    );
+      });
 
-    if (!imagekitResponse.ok) {
-      throw new Error(
-        `ImageKit responded with status ${imagekitResponse.status}`,
-      );
-    }
+      if (!response.ok) {
+        throw new Error(`ImageKit responded with status ${response.status}`);
+      }
 
-    const files = await imagekitResponse.json();
+      return response.json();
+    };
 
-    // 3. Reformat the payload into the clean structure your components are expecting
+    const [files, nextPageProbe] = await Promise.all([
+      fetchFiles(0, 1000),
+      fetchFiles(1000, 1),
+    ]);
+
     const formattedImages = files.map((file: any) => {
       const cleanId = file.name.replace("_color.jpg", "").replace(".jpg", "");
+
       return {
         id: cleanId,
         url: file.url,
@@ -45,8 +53,10 @@ export default async function handler(req: any, res: any) {
       };
     });
 
-    // 4. Send the clean array safely back to your React frontend
-    return res.status(200).json(formattedImages);
+    return res.status(200).json({
+      images: formattedImages,
+      hasMore: nextPageProbe.length > 0,
+    });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

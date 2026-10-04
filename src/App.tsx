@@ -13,6 +13,7 @@ import { GalleryImage } from "./types";
 
 export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
+  const [hasMoreCaptures, setHasMoreCaptures] = useState(false);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -70,16 +71,18 @@ export default function App() {
 
       try {
         const response = await fetch("/api/images");
-        const liveData = response.ok
+        const payload = response.ok
           ? await response.json().catch(() => null)
           : null;
-        const pool =
-          Array.isArray(liveData) && liveData.length > 0
-            ? liveData
-            : STOCK_GALLERY_IMAGES;
+
+        const liveImages = Array.isArray(payload?.images) ? payload.images : [];
+
+        const pool = liveImages.length > 0 ? liveImages : STOCK_GALLERY_IMAGES;
+
         const randomizedLoad = shuffleArray(pool);
         activePool = randomizedLoad;
         setImagesPool(randomizedLoad);
+        setHasMoreCaptures(liveImages.length > 0 && payload?.hasMore === true);
       } catch (err) {
         console.error(
           "ImageKit sync failed, falling back to stock assets:",
@@ -88,6 +91,7 @@ export default function App() {
         const fallback = shuffleArray(STOCK_GALLERY_IMAGES);
         activePool = fallback;
         setImagesPool(fallback);
+        setHasMoreCaptures(false);
       } finally {
         setLoading(false);
       }
@@ -287,6 +291,7 @@ export default function App() {
             {currentView === "archive" && (
               <ArchiveView
                 images={imagesPool}
+                hasMoreCaptures={hasMoreCaptures}
                 onImageSelect={handleSelectImageAndInspect}
                 onBackToHome={handleViewHome}
                 onRandomize={handleRandomizeImages}
