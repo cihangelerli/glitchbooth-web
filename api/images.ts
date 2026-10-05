@@ -61,8 +61,8 @@ export default async function handler(req: any, res: any) {
     const rawLimit = Array.isArray(req.query?.limit)
       ? req.query.limit[0]
       : req.query?.limit;
-    const skip = event ? parseEventSkip(rawSkip) : 0;
-    const limit = event ? parseEventLimit(rawLimit) : 1000;
+    const skip = eventSlug ? parseEventSkip(rawSkip) : 0;
+    const limit = eventSlug ? parseEventLimit(rawLimit) : 1000;
 
     const [files, nextPageProbe] = await Promise.all([
       fetchFiles(skip, limit),
