@@ -3,15 +3,17 @@ import { Menu, X, Instagram, Github } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 interface HeaderProps {
-  currentView: "home" | "archive" | "details";
-  setView: (v: "home" | "archive" | "details") => void;
+  currentView: string;
+  setView: (v: string) => void;
+  onNavigateToPath: (path: string) => void;
 }
 
-export default function Header({ currentView, setView }: HeaderProps) {
+export default function Header({ currentView, setView, onNavigateToPath }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
     { label: "GALLERY", target: "archive" },
+    { label: "EVENTS", target: "events" },
     { label: "ABOUT", target: "about-section" },
     { label: "STATS", target: "stats-section" },
     { label: "CONNECT", target: "connect-section" },
@@ -19,10 +21,8 @@ export default function Header({ currentView, setView }: HeaderProps) {
 
   const handleNavClick = (target: string) => {
     setIsOpen(false);
-    if (target === "archive") {
-      setView("archive");
-      window.history.pushState({ view: "archive" }, "", "/archive");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+    if (target === "archive" || target === "events") {
+      onNavigateToPath(`/${target}`);
     } else {
       // It's a landing page section scroll
       if (currentView !== "home") {
@@ -44,9 +44,7 @@ export default function Header({ currentView, setView }: HeaderProps) {
   };
 
   const handleLogoClick = () => {
-    setView("home");
-    window.history.pushState({ view: "home" }, "", "/");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    onNavigateToPath("/");
   };
 
   return (
@@ -68,7 +66,8 @@ export default function Header({ currentView, setView }: HeaderProps) {
         <nav className="hidden md:flex items-center space-x-12">
           {navItems.map((item) => {
             const isActive =
-              item.target === "archive" && currentView === "archive";
+              (item.target === "archive" && currentView === "archive") ||
+              (item.target === "events" && currentView === "events");
             return (
               <button
                 key={item.label}

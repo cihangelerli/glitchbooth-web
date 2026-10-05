@@ -3,16 +3,8 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/p/:id",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/archive",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/slideshow",
-      "destination": "/index.html"
+      "source": "/((?!api/).*)",
+      "destination": "/index"
     }
   ]
 }

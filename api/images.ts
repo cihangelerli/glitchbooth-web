@@ -1,3 +1,15 @@
+import { getEventBySlug } from "../src/events/registry";
+
+function parseEventSkip(value: unknown): number {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return 0;
+  return Math.min(Number(value), 100_000);
+}
+
+function parseEventLimit(value: unknown): number {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return 100;
+  return Math.min(Math.max(Number(value), 1), 100);
+}
+
 export default async function handler(req: any, res: any) {
   // 1. Securely read the private key from your local .env file
   const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
@@ -11,12 +23,24 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    const rawEvent = Array.isArray(req.query?.event)
+      ? req.query.event[0]
+      : req.query?.event;
+    const eventSlug = typeof rawEvent === "string" ? rawEvent.trim() : undefined;
+    const event = eventSlug ? getEventBySlug(eventSlug) : undefined;
+
+    if (eventSlug && !event) {
+      return res.status(404).json({ error: "Unknown event" });
+    }
+
+    const imageKitPath = event?.imageKitPath ?? "/booth_captures/";
+
     // 2. Generate the Basic Authentication header ImageKit expects
     const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
 
     const fetchFiles = async (skip: number, limit: number) => {
       const query = new URLSearchParams({
-        path: "/booth_captures/",
+        path: imageKitPath,
         sort: "DESC_CREATED",
         skip: String(skip),
         limit: String(limit),
@@ -35,9 +59,14 @@ export default async function handler(req: any, res: any) {
       return response.json();
     };
 
+    const rawSkip = Array.isArray(req.query?.skip) ? req.query.skip[0] : req.query?.skip;
+    const rawLimit = Array.isArray(req.query?.limit) ? req.query.limit[0] : req.query?.limit;
+    const skip = event ? parseEventSkip(rawSkip) : 0;
+    const limit = event ? parseEventLimit(rawLimit) : 1000;
+
     const [files, nextPageProbe] = await Promise.all([
-      fetchFiles(0, 1000),
-      fetchFiles(1000, 1),
+      fetchFiles(skip, limit),
+      fetchFiles(skip + limit, 1),
     ]);
 
     const formattedImages = files.map((file: any) => {

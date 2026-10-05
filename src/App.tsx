@@ -10,6 +10,43 @@ import ArchiveView from "./components/ArchiveView";
 import DetailsView from "./components/DetailsView";
 import { STOCK_GALLERY_IMAGES } from "./data/images";
 import { GalleryImage } from "./types";
+import EventsPage from "./events/EventsPage";
+import EventPage from "./events/EventPage";
+import { getEventBySlug } from "./events/registry";
+import { getEventCaptureUrl } from "./events/eventCapture";
+import type { EventConfig } from "./events/types";
+
+type AppView = "home" | "archive" | "details" | "slideshow" | "events" | "event" | "event-details" | "not-found";
+
+type ResolvedRoute =
+  | { kind: "home" | "archive" | "slideshow" | "events" | "not-found" }
+  | { kind: "details"; captureId: string }
+  | { kind: "event"; event: EventConfig }
+  | { kind: "event-details"; event: EventConfig; captureId: string };
+
+function resolveRoute(pathname: string): ResolvedRoute {
+  const path = pathname.replace(/\/$/, "") || "/";
+  if (path === "/") return { kind: "home" };
+  if (path === "/archive") return { kind: "archive" };
+  if (path === "/slideshow") return { kind: "slideshow" };
+  if (path === "/events") return { kind: "events" };
+
+  const mainCapture = path.match(/^\/p\/([^/]+)$/);
+  if (mainCapture) return { kind: "details", captureId: mainCapture[1] };
+
+  const eventCapture = path.match(/^\/([^/]+)\/p\/([^/]+)$/);
+  if (eventCapture) {
+    const event = getEventBySlug(eventCapture[1]);
+    return event ? { kind: "event-details", event, captureId: eventCapture[2] } : { kind: "not-found" };
+  }
+
+  const eventLanding = path.match(/^\/([^/]+)$/);
+  if (eventLanding) {
+    const event = getEventBySlug(eventLanding[1]);
+    return event ? { kind: "event", event } : { kind: "not-found" };
+  }
+  return { kind: "not-found" };
+}
 
 export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
@@ -21,24 +58,24 @@ export default function App() {
   const [isHeroVisible, setIsHeroVisible] = useState<boolean>(true);
 
   const [currentView, setCurrentView] = useState<
-    "home" | "archive" | "details" | "slideshow"
-  >(() => {
-    const path = window.location.pathname.replace(/\/$/, "");
-    if (path === "/slideshow") return "slideshow";
-    if (path === "/archive") return "archive";
-    if (path.startsWith("/p/")) return "details";
-    return "home";
+    AppView
+  >(() => resolveRoute(window.location.pathname).kind);
+  const [activeEvent, setActiveEvent] = useState<EventConfig | null>(() => {
+    const route = resolveRoute(window.location.pathname);
+    return "event" in route ? route.event : null;
   });
 
   // Centralized router function that pairs React state updates with window.history
   const navigateTo = (
-    view: "home" | "archive" | "details" | "slideshow",
+    view: AppView,
     path: string,
     image: GalleryImage | null = null,
     replace: boolean = false,
+    event: EventConfig | null = null,
   ) => {
     setCurrentView(view);
     setSelectedImage(image);
+    setActiveEvent(event);
 
     if (window.location.pathname !== path) {
       if (replace) {
@@ -48,6 +85,14 @@ export default function App() {
       }
     }
 
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const navigateToPath = (path: string) => {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, "", path);
+    }
+    window.dispatchEvent(new PopStateEvent("popstate"));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -125,11 +170,13 @@ export default function App() {
     const syncViewWithUrl = () => {
       const path = window.location.pathname.replace(/\/$/, ""); // Strip trailing slash
 
-      if (path === "/archive") {
-        setCurrentView("archive");
+      const route = resolveRoute(window.location.pathname);
+      if (route.kind === "archive" || route.kind === "home" || route.kind === "slideshow" || route.kind === "events" || route.kind === "not-found") {
+        setCurrentView(route.kind);
         setSelectedImage(null);
-      } else if (path.startsWith("/p/")) {
-        const photoId = path.split("/p/")[1];
+        setActiveEvent(null);
+      } else if (route.kind === "details") {
+        const photoId = route.captureId;
         if (photoId) {
           const match = imagesPool.find((img) => img.id === photoId);
           if (match) {
@@ -145,13 +192,23 @@ export default function App() {
             } as GalleryImage);
           }
           setCurrentView("details");
+          setActiveEvent(null);
         }
-      } else if (path === "/slideshow") {
-        setCurrentView("slideshow");
-        setSelectedImage(null);
-      } else {
-        setCurrentView("home");
-        setSelectedImage(null);
+      } else if (route.kind === "event" || route.kind === "event-details") {
+        setActiveEvent(route.event);
+        if (route.kind === "event") {
+          setCurrentView("event");
+          setSelectedImage(null);
+        } else {
+          setSelectedImage({
+            id: route.captureId,
+            url: getEventCaptureUrl(route.event, route.captureId),
+            filename: `${route.captureId}_color.jpg`,
+            title: `CAPTURE_${route.captureId}`,
+            timestamp: new Date().toISOString(),
+          } as GalleryImage);
+          setCurrentView("event-details");
+        }
       }
     };
 
@@ -186,11 +243,11 @@ export default function App() {
   };
 
   const handleViewHome = () => {
-    navigateTo("home", "/");
+    navigateToPath("/");
   };
 
   const handleViewArchive = () => {
-    navigateTo("archive", "/archive");
+    navigateToPath("/archive");
   };
 
   const handleSelectImageAndInspect = (img: GalleryImage) => {
@@ -209,10 +266,28 @@ export default function App() {
       <div className="scanlines-overlay" />
       <div className="scanline-moving-bar" />
 
-      <Header currentView={currentView} setView={setCurrentView} />
+      {currentView !== "event" && (
+        <Header currentView={currentView} setView={(view) => setCurrentView(view as AppView)} onNavigateToPath={navigateToPath} />
+      )}
 
       <main className="pb-16 min-h-[75vh]">
-        {loading ? (
+        {currentView === "event" && activeEvent ? (
+          <EventPage
+            event={activeEvent}
+            onImageSelect={(image) => navigateTo("event-details", `/${activeEvent.slug}/p/${image.id}`, image, false, activeEvent)}
+          />
+        ) : currentView === "event-details" && activeEvent && selectedImage ? (
+          <DetailsView
+            image={selectedImage}
+            event={activeEvent}
+            onBackToArchive={() => navigateToPath(`/${activeEvent.slug}`)}
+            onBackToHome={handleViewHome}
+          />
+        ) : currentView === "events" ? (
+          <EventsPage />
+        ) : currentView === "not-found" ? (
+          <div className="min-h-[60vh] flex items-center justify-center font-mono text-sm text-[#84967e]">[ ROUTE_NOT_FOUND ]</div>
+        ) : loading ? (
           <div className="w-full h-[70vh] flex flex-col items-center justify-center font-mono text-[#00ff41] text-xs tracking-widest">
             <div className="flex items-center space-x-2 animate-pulse mb-2">
               <span className="w-2 h-2 bg-[#00ff41] rounded-full" />
@@ -309,7 +384,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="w-full border-t border-matrix/20 bg-black py-8 font-mono text-xs text-[#84967e] select-none">
+      {currentView !== "event" && <footer className="w-full border-t border-matrix/20 bg-black py-8 font-mono text-xs text-[#84967e] select-none">
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left flex items-center space-x-2">
             <span className="w-1.5 h-1.5 bg-[#00ff41] rounded-full animate-ping" />
@@ -330,6 +405,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      }
     </div>
   );
 }

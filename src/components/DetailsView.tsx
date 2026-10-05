@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { Download, Instagram } from "lucide-react";
 import { GalleryImage } from "../types";
 import { ArrowLeft } from "lucide-react";
+import type { EventConfig } from "../events/types";
 
 interface DetailsViewProps {
   image: GalleryImage;
   onBackToArchive: () => void;
   onBackToHome: () => void;
+  event?: EventConfig;
 }
 
 // Formats authoritative ISO timestamp into UTC string with safety fallback
@@ -47,6 +49,7 @@ export default function DetailsView({
   image,
   onBackToArchive,
   onBackToHome,
+  event,
 }: DetailsViewProps) {
   const [isMobile, setIsMobile] = useState(false);
 
@@ -188,6 +191,17 @@ export default function DetailsView({
 
           {/* 3. Instagram Links */}
           <div className="space-y-3">
+            {event?.instagramUrl && event.instagramLabel && (
+              <a
+                href={event.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full border border-[#00e639]/60 text-[#00e639] hover:text-white hover:border-white hover:bg-[#00e639]/5 font-bold text-xs tracking-widest py-3 px-4 flex items-center justify-center space-x-2 transition-all duration-200 cursor-pointer"
+              >
+                <Instagram size={14} className="text-current" />
+                <span>{event.instagramLabel}</span>
+              </a>
+            )}
             <a
               href="https://instagram.com/dirtcakestudio"
               target="_blank"
@@ -347,6 +361,17 @@ export default function DetailsView({
           </button>
 
           <div className="space-y-3">
+            {event?.instagramUrl && event.instagramLabel && (
+              <a
+                href={event.instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full border border-[#00e639]/60 text-[#00e639] hover:text-white hover:border-white hover:bg-[#00e639]/5 font-bold text-xs tracking-widest py-3 px-4 flex items-center justify-center space-x-2 transition-all duration-200 cursor-pointer"
+              >
+                <Instagram size={14} className="text-current" />
+                <span>{event.instagramLabel}</span>
+              </a>
+            )}
             <a
               href="https://instagram.com/dirtcakestudio"
               target="_blank"
