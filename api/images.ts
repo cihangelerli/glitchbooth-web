@@ -1,4 +1,4 @@
-import { getEventBySlug } from "../src/events/registry";
+import { getEventPath } from "../src/events/EventPaths";
 
 function parseEventSkip(value: unknown): number {
   if (typeof value !== "string" || !/^\d+$/.test(value)) return 0;
@@ -26,14 +26,10 @@ export default async function handler(req: any, res: any) {
     const rawEvent = Array.isArray(req.query?.event)
       ? req.query.event[0]
       : req.query?.event;
-    const eventSlug = typeof rawEvent === "string" ? rawEvent.trim() : undefined;
-    const event = eventSlug ? getEventBySlug(eventSlug) : undefined;
 
-    if (eventSlug && !event) {
-      return res.status(404).json({ error: "Unknown event" });
-    }
-
-    const imageKitPath = event?.imageKitPath ?? "/booth_captures/";
+    const eventSlug =
+      typeof rawEvent === "string" ? rawEvent.trim() : undefined;
+    const imageKitPath = getEventPath(eventSlug);
 
     // 2. Generate the Basic Authentication header ImageKit expects
     const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
@@ -59,8 +55,12 @@ export default async function handler(req: any, res: any) {
       return response.json();
     };
 
-    const rawSkip = Array.isArray(req.query?.skip) ? req.query.skip[0] : req.query?.skip;
-    const rawLimit = Array.isArray(req.query?.limit) ? req.query.limit[0] : req.query?.limit;
+    const rawSkip = Array.isArray(req.query?.skip)
+      ? req.query.skip[0]
+      : req.query?.skip;
+    const rawLimit = Array.isArray(req.query?.limit)
+      ? req.query.limit[0]
+      : req.query?.limit;
     const skip = event ? parseEventSkip(rawSkip) : 0;
     const limit = event ? parseEventLimit(rawLimit) : 1000;
 
