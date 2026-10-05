@@ -1,5 +1,3 @@
-import { getEventPath } from "../src/events/EventPaths";
-
 function parseEventSkip(value: unknown): number {
   if (typeof value !== "string" || !/^\d+$/.test(value)) return 0;
   return Math.min(Number(value), 100_000);
@@ -11,7 +9,6 @@ function parseEventLimit(value: unknown): number {
 }
 
 export default async function handler(req: any, res: any) {
-  // 1. Securely read the private key from your local .env file
   const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
   const urlEndpoint = "https://api.imagekit.io/v1/files";
 
@@ -28,10 +25,15 @@ export default async function handler(req: any, res: any) {
       : req.query?.event;
 
     const eventSlug =
-      typeof rawEvent === "string" ? rawEvent.trim() : undefined;
-    const imageKitPath = getEventPath(eventSlug);
+      typeof rawEvent === "string" && rawEvent.trim().length > 0
+        ? rawEvent.trim()
+        : undefined;
 
-    // 2. Generate the Basic Authentication header ImageKit expects
+    // Dynamic path convention: automatically targets /booth_captures/<slug>/
+    const imageKitPath = eventSlug
+      ? `/booth_captures/${eventSlug}/`
+      : "/booth_captures/";
+
     const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
 
     const fetchFiles = async (skip: number, limit: number) => {
@@ -61,6 +63,7 @@ export default async function handler(req: any, res: any) {
     const rawLimit = Array.isArray(req.query?.limit)
       ? req.query.limit[0]
       : req.query?.limit;
+
     const skip = parseEventSkip(rawSkip);
     const limit = parseEventLimit(rawLimit);
 
