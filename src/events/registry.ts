@@ -1,4 +1,5 @@
 import { synthistan2026 } from "../events_pages/synthistan-2026/event.config";
+import type { EventStatus } from "./types";
 
 export const EVENTS = [synthistan2026] as const;
 
@@ -26,7 +27,12 @@ export function getEventBySlug(slug?: string) {
   return EVENTS.find((event) => event.slug.toLowerCase() === normalized);
 }
 
-const statusOrder = { active: 0, upcoming: 1, past: 2 } as const;
+const statusOrder: Record<EventStatus, number> = {
+  active: 0,
+  upcoming: 1,
+  past: 2,
+  cancelled: 3,
+};
 
 export function getEventsForDirectory() {
   return [...EVENTS].sort((a, b) => {
