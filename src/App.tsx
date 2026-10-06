@@ -16,7 +16,15 @@ import { getEventBySlug } from "./events/registry";
 import { getEventCaptureUrl } from "./events/eventCapture";
 import type { EventConfig } from "./events/types";
 
-type AppView = "home" | "archive" | "details" | "slideshow" | "events" | "event" | "event-details" | "not-found";
+type AppView =
+  | "home"
+  | "archive"
+  | "details"
+  | "slideshow"
+  | "events"
+  | "event"
+  | "event-details"
+  | "not-found";
 
 type ResolvedRoute =
   | { kind: "home" | "archive" | "slideshow" | "events" | "not-found" }
@@ -37,7 +45,9 @@ function resolveRoute(pathname: string): ResolvedRoute {
   const eventCapture = path.match(/^\/([^/]+)\/p\/([^/]+)$/);
   if (eventCapture) {
     const event = getEventBySlug(eventCapture[1]);
-    return event ? { kind: "event-details", event, captureId: eventCapture[2] } : { kind: "not-found" };
+    return event
+      ? { kind: "event-details", event, captureId: eventCapture[2] }
+      : { kind: "not-found" };
   }
 
   const eventLanding = path.match(/^\/([^/]+)$/);
@@ -57,9 +67,9 @@ export default function App() {
   // Persistent visibility toggle flag - stays across subcomponent view switching paths
   const [isHeroVisible, setIsHeroVisible] = useState<boolean>(true);
 
-  const [currentView, setCurrentView] = useState<
-    AppView
-  >(() => resolveRoute(window.location.pathname).kind);
+  const [currentView, setCurrentView] = useState<AppView>(
+    () => resolveRoute(window.location.pathname).kind,
+  );
   const [activeEvent, setActiveEvent] = useState<EventConfig | null>(() => {
     const route = resolveRoute(window.location.pathname);
     return "event" in route ? route.event : null;
@@ -171,7 +181,13 @@ export default function App() {
       const path = window.location.pathname.replace(/\/$/, ""); // Strip trailing slash
 
       const route = resolveRoute(window.location.pathname);
-      if (route.kind === "archive" || route.kind === "home" || route.kind === "slideshow" || route.kind === "events" || route.kind === "not-found") {
+      if (
+        route.kind === "archive" ||
+        route.kind === "home" ||
+        route.kind === "slideshow" ||
+        route.kind === "events" ||
+        route.kind === "not-found"
+      ) {
         setCurrentView(route.kind);
         setSelectedImage(null);
         setActiveEvent(null);
@@ -266,15 +282,25 @@ export default function App() {
       <div className="scanlines-overlay" />
       <div className="scanline-moving-bar" />
 
-      {currentView !== "event" && (
-        <Header currentView={currentView} setView={(view) => setCurrentView(view as AppView)} onNavigateToPath={navigateToPath} />
-      )}
+      <Header
+        currentView={currentView}
+        setView={(view) => setCurrentView(view as AppView)}
+        onNavigateToPath={navigateToPath}
+      />
 
       <main className="pb-16 min-h-[75vh]">
         {currentView === "event" && activeEvent ? (
           <EventPage
             event={activeEvent}
-            onImageSelect={(image) => navigateTo("event-details", `/${activeEvent.slug}/p/${image.id}`, image, false, activeEvent)}
+            onImageSelect={(image) =>
+              navigateTo(
+                "event-details",
+                `/${activeEvent.slug}/p/${image.id}`,
+                image,
+                false,
+                activeEvent,
+              )
+            }
           />
         ) : currentView === "event-details" && activeEvent && selectedImage ? (
           <DetailsView
@@ -286,7 +312,9 @@ export default function App() {
         ) : currentView === "events" ? (
           <EventsPage />
         ) : currentView === "not-found" ? (
-          <div className="min-h-[60vh] flex items-center justify-center font-mono text-sm text-[#84967e]">[ ROUTE_NOT_FOUND ]</div>
+          <div className="min-h-[60vh] flex items-center justify-center font-mono text-sm text-[#84967e]">
+            [ ROUTE_NOT_FOUND ]
+          </div>
         ) : loading ? (
           <div className="w-full h-[70vh] flex flex-col items-center justify-center font-mono text-[#00ff41] text-xs tracking-widest">
             <div className="flex items-center space-x-2 animate-pulse mb-2">
@@ -384,7 +412,7 @@ export default function App() {
         )}
       </main>
 
-      {currentView !== "event" && <footer className="w-full border-t border-matrix/20 bg-black py-8 font-mono text-xs text-[#84967e] select-none">
+      <footer className="w-full border-t border-matrix/20 bg-black py-8 font-mono text-xs text-[#84967e] select-none">
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-center sm:text-left flex items-center space-x-2">
             <span className="w-1.5 h-1.5 bg-[#00ff41] rounded-full animate-ping" />
@@ -405,7 +433,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-      }
     </div>
   );
 }

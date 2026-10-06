@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Github, Instagram, LoaderCircle } from "lucide-react";
+import { ArrowLeft, LoaderCircle } from "lucide-react";
 import type { GalleryImage } from "../types";
 import type { EventConfig } from "./types";
 import BlinkingCursor from "./BlinkingCursor";
@@ -62,39 +62,6 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
   return (
     <div className="min-h-screen bg-[#131313] text-[#e2e2e2]">
       <div className="scanlines-overlay" />
-      <header className="sticky top-0 z-50 border-b border-matrix/20 bg-[#131313]/90 px-4 py-4 backdrop-blur-md">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between gap-4 font-mono text-xs">
-          <a
-            href="/"
-            className="font-display font-bold text-[#00ff41] glow-text-matrix"
-          >
-            &gt; GLITCH_BOOTH
-          </a>
-          <nav className="flex items-center gap-4 text-[#b9ccb2]">
-            <a href="/events" className="hover:text-[#00ff41]">
-              EVENTS
-            </a>
-            <a
-              href="https://github.com/cihangelerli/glitchbooth"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub"
-              className="hover:text-[#00ff41]"
-            >
-              <Github size={16} />
-            </a>
-            <a
-              href="https://instagram.com/glitchbooth.online"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Glitchbooth Instagram"
-              className="hover:text-[#00ff41]"
-            >
-              <Instagram size={16} />
-            </a>
-          </nav>
-        </div>
-      </header>
       <main className="max-w-[1200px] mx-auto px-4 py-10 md:py-16">
         <a
           href="/events"
