@@ -8,6 +8,7 @@ export const synthistan2026: EventConfig = {
   year: "2026",
   cardTitle: "SYNTHISTAN 2026",
   eventDate: "2026-10-10",
+  endDate: "2026-10-10", // Added explicit end date (or specify multi-day e.g., "2026-10-12")
   dateLabel: "October 10th",
   status: "upcoming",
   description: `Synthistan is a gathering focused on synthesizers, electronic instruments, DIY electronics, experimental sound, and creative technology. It brings together makers, musicians, designers, artists, and enthusiasts to share their projects, ideas, and experiments.

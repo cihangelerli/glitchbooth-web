@@ -13,6 +13,7 @@ export const newEvent: EventConfig = {
   year: "2026",
   cardTitle: "YOUR EVENT 2026",
   eventDate: "2026-01-01",
+  endDate: "2026-01-01",
   dateLabel: "January 1st",
   status: "upcoming",
   description: "Replace with your event description.",
