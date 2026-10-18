@@ -1,7 +1,8 @@
 import { synthistan2026 } from "../events_pages/synthistan-2026/event.config";
+import { watergardencaw2026 } from "../events_pages/watergarden-caw-2026/event.config";
 import type { EventStatus } from "./types";
 
-export const EVENTS = [synthistan2026] as const;
+export const EVENTS = [synthistan2026, watergardencaw2026] as const;
 
 const RESERVED_SLUGS = new Set(["archive", "slideshow", "events", "p", "api"]);
 
