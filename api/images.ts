@@ -8,146 +8,125 @@ function timestampFromCaptureId(id: string): string | undefined {
   return new Date(ms).toISOString();
 }
 
-const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/i;
+// Event folders this API is allowed to list. KEEP IN SYNC with the `slug` in each
+// events_pages/*/event.config.ts. Anything else gets a 404, so unpublished folders
+// under /booth_captures/ can never be enumerated.
+const ALLOWED_EVENT_SLUGS = new Set(["synthistan2026", "watergardencaw2026"]);
+
+const LIST_URL = "https://api.imagekit.io/v1/files";
+const PAGE_MAX = 100; // per page for events and the home first page
+const ALL_MAX = 1000; // ImageKit's per-request maximum
+const CACHE_OK = "public, s-maxage=30, stale-while-revalidate=120";
+
+const firstValue = (value: unknown): string | undefined => {
+  const v = Array.isArray(value) ? value[0] : value;
+  return typeof v === "string" ? v : undefined;
+};
+
+const parseCount = (value: string | undefined): number | undefined =>
+  value !== undefined && /^\d+$/.test(value)
+    ? Math.min(Number(value), 100_000)
+    : undefined;
 
 const isCaptureFile = (file: any) =>
   file?.type !== "folder" &&
   typeof file?.url === "string" &&
   typeof file?.name === "string";
 
-// ISO strings sort lexicographically, so newest-first is a plain string compare.
-const newestFirst = (a: any, b: any) => b.timestamp.localeCompare(a.timestamp);
+const formatFile = (file: any) => {
+  const cleanId = file.name.replace("_color.jpg", "").replace(".jpg", "");
+  // True capture time from the ID; ImageKit's createdAt (upload time) is the fallback.
+  const captureIso = timestampFromCaptureId(cleanId) ?? file.createdAt ?? "";
+  return {
+    id: cleanId,
+    url: file.url,
+    filename: file.name,
+    title: `CAPTURE_${cleanId}`,
+    date: captureIso.split("T")[0],
+    timestamp: captureIso,
+  };
+};
 
-function parseEventSkip(value: unknown): number | undefined {
-  if (typeof value !== "string" || !/^\d+$/.test(value)) return undefined;
-  return Math.min(Number(value), 100_000);
-}
-
-function parseEventLimit(value: unknown): number {
-  if (typeof value !== "string" || !/^\d+$/.test(value)) return 100;
-  return Math.min(Math.max(Number(value), 1), 100);
+// Keep real captures only, drop duplicate IDs (e.g. `<id>.jpg` next to
+// `<id>_color.jpg`), newest first.
+function toImages(files: any[]) {
+  const seen = new Set<string>();
+  const images: ReturnType<typeof formatFile>[] = [];
+  for (const file of files) {
+    if (!isCaptureFile(file)) continue;
+    const image = formatFile(file);
+    if (seen.has(image.id)) continue;
+    seen.add(image.id);
+    images.push(image);
+  }
+  return images.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 }
 
 export default async function handler(req: any, res: any) {
   const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
-  const urlEndpoint = "https://api.imagekit.io/v1/files";
-
   if (!privateKey) {
-    return res.status(500).json({
-      error:
-        "Server configuration error: IMAGEKIT_PRIVATE_KEY is missing from your .env file.",
-    });
+    console.error("IMAGEKIT_PRIVATE_KEY is missing");
+    return res.status(500).json({ error: "Server configuration error" });
   }
 
+  const eventSlug = firstValue(req.query?.event)?.trim() || undefined;
+  if (eventSlug && !ALLOWED_EVENT_SLUGS.has(eventSlug)) {
+    return res.status(404).json({ error: "Unknown event" });
+  }
+
+  const imageKitPath = eventSlug
+    ? `/booth_captures/${eventSlug}/`
+    : "/booth_captures/";
+  const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
+
+  const fetchFiles = async (skip: number, limit: number): Promise<any[]> => {
+    const query = new URLSearchParams({
+      path: imageKitPath,
+      type: "file",
+      sort: "DESC_CREATED",
+      skip: String(skip),
+      limit: String(limit),
+    });
+    const response = await fetch(`${LIST_URL}?${query}`, {
+      headers: { Authorization: `Basic ${base64Auth}` },
+    });
+    if (!response.ok) {
+      throw new Error(`ImageKit responded with status ${response.status}`);
+    }
+    const files = await response.json();
+    return Array.isArray(files) ? files : [];
+  };
+
   try {
-    const rawEvent = Array.isArray(req.query?.event)
-      ? req.query.event[0]
-      : req.query?.event;
+    const rawSkip = parseCount(firstValue(req.query?.skip));
+    const rawLimit = parseCount(firstValue(req.query?.limit));
 
-    const eventSlug =
-      typeof rawEvent === "string" && rawEvent.trim().length > 0
-        ? rawEvent.trim()
-        : undefined;
+    // Paged mode: ONE upstream call. Ask for one extra record to learn
+    // whether another page exists, and return a server-computed cursor.
+    if (rawSkip !== undefined || rawLimit !== undefined) {
+      const skip = rawSkip ?? 0;
+      const limit = Math.min(Math.max(rawLimit ?? PAGE_MAX, 1), PAGE_MAX);
+      const files = await fetchFiles(skip, limit + 1);
+      const pageFiles = files.slice(0, limit);
 
-    if (eventSlug && !SLUG_PATTERN.test(eventSlug)) {
-      return res.status(400).json({ error: "Invalid event slug" });
-    }
-
-    const imageKitPath = eventSlug
-      ? `/booth_captures/${eventSlug}/`
-      : "/booth_captures/";
-
-    const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
-
-    const fetchFiles = async (skip: number, limit: number) => {
-      const query = new URLSearchParams({
-        path: imageKitPath,
-        type: "file",
-        sort: "DESC_CREATED",
-        skip: String(skip),
-        limit: String(limit),
-      });
-
-      const response = await fetch(`${urlEndpoint}?${query}`, {
-        headers: {
-          Authorization: `Basic ${base64Auth}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`ImageKit responded with status ${response.status}`);
-      }
-
-      return response.json();
-    };
-
-    const formatFile = (file: any) => {
-      const cleanId = file.name.replace("_color.jpg", "").replace(".jpg", "");
-      // True capture time from the ID; ImageKit's createdAt (upload time) is the fallback.
-      const captureIso =
-        timestampFromCaptureId(cleanId) ?? file.createdAt ?? "";
-      return {
-        id: cleanId,
-        url: file.url,
-        filename: file.name,
-        title: `CAPTURE_${cleanId}`,
-        date: captureIso.split("T")[0],
-        timestamp: captureIso,
-      };
-    };
-
-    const rawSkip = Array.isArray(req.query?.skip)
-      ? req.query.skip[0]
-      : req.query?.skip;
-    const rawLimit = Array.isArray(req.query?.limit)
-      ? req.query.limit[0]
-      : req.query?.limit;
-
-    // 1. If explicit skip is passed by client, perform single page query
-    if (rawSkip !== undefined && rawSkip !== null && rawSkip !== "") {
-      const skip = parseEventSkip(rawSkip) ?? 0;
-      const limit = parseEventLimit(rawLimit);
-
-      const [files, nextPageProbe] = await Promise.all([
-        fetchFiles(skip, limit),
-        fetchFiles(skip + limit, 1),
-      ]);
-
-      res.setHeader(
-        "Cache-Control",
-        "public, s-maxage=30, stale-while-revalidate=120",
-      );
+      res.setHeader("Cache-Control", CACHE_OK);
       return res.status(200).json({
-        images: files.filter(isCaptureFile).map(formatFile).sort(newestFirst),
-        hasMore: nextPageProbe.length > 0,
+        images: toImages(pageFiles),
+        hasMore: files.length > limit,
+        nextSkip: skip + pageFiles.length, // raw upstream offset, not displayed count
       });
     }
 
-    // 2. Default fetch: up to 1000 captures. All pages are requested in
-    //    parallel (plus a 1-item probe to learn whether more exist).
-    const BATCH = 100;
-    const MAX_FILES = 1000;
-
-    const [pages, probe] = await Promise.all([
-      Promise.all(
-        Array.from({ length: MAX_FILES / BATCH }, (_, i) =>
-          fetchFiles(i * BATCH, BATCH),
-        ),
-      ),
-      fetchFiles(MAX_FILES, 1),
-    ]);
-
-    const allFiles = pages.flatMap((page) => (Array.isArray(page) ? page : []));
-
-    res.setHeader(
-      "Cache-Control",
-      "public, s-maxage=30, stale-while-revalidate=120",
-    );
+    // Default mode: everything (up to 1000) in ONE upstream call.
+    const files = await fetchFiles(0, ALL_MAX);
+    res.setHeader("Cache-Control", CACHE_OK);
     return res.status(200).json({
-      images: allFiles.filter(isCaptureFile).map(formatFile).sort(newestFirst),
-      hasMore: Array.isArray(probe) && probe.length > 0,
+      images: toImages(files),
+      hasMore: files.length === ALL_MAX,
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error("images API failed:", error?.message);
+    res.setHeader("Cache-Control", "no-store");
+    return res.status(502).json({ error: "Image listing unavailable" });
   }
 }

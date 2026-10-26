@@ -16,6 +16,7 @@ import { getEventBySlug } from "./events/registry";
 import { getEventCaptureUrl } from "./events/eventCapture";
 import type { EventConfig } from "./events/types";
 import { timestampFromCaptureId } from "./utils/captureTime";
+import { applyPageMeta } from "./utils/pageMeta";
 
 type AppView =
   | "home"
@@ -82,6 +83,8 @@ function getImageFromHistoryState(id: string): GalleryImage | null {
 
 export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
+  const [archiveImages, setArchiveImages] = useState<GalleryImage[] | null>(null);
+  const [archiveHasMore, setArchiveHasMore] = useState(false);
   const [hasMoreCaptures, setHasMoreCaptures] = useState(false);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -147,7 +150,7 @@ export default function App() {
   useEffect(() => {
     async function initializeProjectData() {
       try {
-        const response = await fetch("/api/images");
+        const response = await fetch("/api/images?limit=100");
         const payload = response.ok
           ? await response.json().catch(() => null)
           : null;
@@ -275,6 +278,68 @@ export default function App() {
       navigateToPath(fallbackPath);
     }
   };
+
+  // Load the full list only when the archive is opened
+  useEffect(() => {
+    if (currentView !== "archive" || archiveImages !== null) return;
+    let cancelled = false;
+    fetch("/api/images")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((payload) => {
+        if (cancelled || !Array.isArray(payload?.images)) return;
+        if (payload.images.length === 0) return;
+        setArchiveImages(payload.images);
+        setArchiveHasMore(payload.hasMore === true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [currentView, archiveImages]);
+
+  useEffect(() => {
+    switch (currentView) {
+      case "home":
+        applyPageMeta({
+          title: "GLITCH BOOTH — Experimental Photo Booth",
+          description:
+            "Glitch Booth is an experimental photo booth installation capturing moments in the tension between perfect execution and hardware failure.",
+          path: "/",
+        });
+        break;
+      case "archive":
+        applyPageMeta({
+          title: "Archive — GLITCH BOOTH",
+          description: "Browse captures from the Glitch Booth archive.",
+          path: "/archive",
+        });
+        break;
+      case "events":
+        applyPageMeta({
+          title: "Event Directory — GLITCH BOOTH",
+          description: "Events where the Glitch Booth has appeared.",
+          path: "/events",
+        });
+        break;
+      case "event":
+        if (activeEvent) {
+          applyPageMeta({
+            title: `${activeEvent.cardTitle} — GLITCH BOOTH`,
+            description: activeEvent.description.replace(/\s+/g, " ").slice(0, 160),
+            path: `/${activeEvent.slug}`,
+          });
+        }
+        break;
+      default:
+        // capture pages, slideshow, 404: keep out of the index
+        applyPageMeta({
+          title: "GLITCH BOOTH",
+          description: "Glitch Booth capture.",
+          path: window.location.pathname,
+          noindex: true,
+        });
+    }
+  }, [currentView, activeEvent]);
 
   if (currentView === "slideshow") {
     return <Slideshow images={imagesPool} loading={loading} />;
@@ -405,8 +470,8 @@ export default function App() {
 
             {currentView === "archive" && (
               <ArchiveView
-                images={imagesPool}
-                hasMoreCaptures={hasMoreCaptures}
+                images={archiveImages ?? imagesPool}
+                hasMoreCaptures={archiveImages ? archiveHasMore : hasMoreCaptures}
                 onImageSelect={handleSelectImageAndInspect}
                 onBackToHome={handleViewHome}
                 onRandomize={handleRandomizeImages}

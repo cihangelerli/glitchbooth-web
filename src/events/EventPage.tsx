@@ -15,6 +15,7 @@ interface EventPageProps {
 
 export default function EventPage({ event, onImageSelect }: EventPageProps) {
   const [images, setImages] = useState<GalleryImage[]>([]);
+  const [nextSkip, setNextSkip] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -29,22 +30,24 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
     const nextImages: GalleryImage[] = Array.isArray(payload?.images)
       ? payload.images
       : [];
-    setImages((current) =>
-      skip === 0
-        ? nextImages
-        : [
-            ...current,
-            ...nextImages.filter(
-              (image) => !current.some((item) => item.id === image.id),
-            ),
-          ],
-    );
+    setImages((current) => {
+      if (skip === 0) return nextImages;
+      const seen = new Set(current.map((image) => image.id));
+      return [...current, ...nextImages.filter((image) => !seen.has(image.id))];
+    });
     setHasMore(payload?.hasMore === true);
+    setNextSkip(
+      typeof payload?.nextSkip === "number"
+        ? payload.nextSkip
+        : skip + nextImages.length,
+    );
   };
 
   useEffect(() => {
     setLoading(true);
     setError(false);
+    setImages([]);
+    setNextSkip(0);
     loadImages(0)
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -53,7 +56,7 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      await loadImages(images.length);
+      await loadImages(nextSkip);
     } catch {
       setError(true);
     } finally {

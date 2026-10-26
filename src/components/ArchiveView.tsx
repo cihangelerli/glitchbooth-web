@@ -106,7 +106,7 @@ export default function ArchiveView({
   const captureCountLabel = isFiltering
     ? `${sortedAndFilteredImages.length} MATCHES`
     : hasMoreCaptures
-      ? "1000+ CAPTURES"
+      ? `${images.length}+ CAPTURES`
       : `${images.length} CAPTURES`;
 
   return (

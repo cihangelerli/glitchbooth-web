@@ -4,6 +4,7 @@ import type { EventConfig } from "../../events/types";
 // EVENT CONFIGURATION TEMPLATE
 // 'SLUG' controls both 'slug' and 'imageKitPath' (/booth_captures/<SLUG>/).
 // Ensure 'EVENT_SLUG' in server.py matches this exact string.
+// 3. Add this slug to ALLOWED_EVENT_SLUGS in api/images.ts.
 // =========================================================================
 const SLUG = "your-event";
 

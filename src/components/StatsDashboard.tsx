@@ -29,6 +29,7 @@ export default function StatsDashboard() {
 
   useEffect(() => {
     async function fetchCloudTelemetry() {
+      if (document.hidden) return;
       try {
         // CHANGED: Changed to "/stats.json" to natively match local public folder files.
         // NOTE: When deploying live, change this string to your absolute ImageKit URL:
@@ -38,7 +39,9 @@ export default function StatsDashboard() {
 
         // SURGICAL TWEAK: Append a dynamic timestamp parameter (?t=...)
         // This forces the CDN and browser to bypass cache on every fetch.
-        const response = await fetch(`${baseUrl}?t=${Date.now()}`);
+        const response = await fetch(
+          `${baseUrl}?t=${Math.floor(Date.now() / 60000)}`,
+        );
 
         if (!response.ok) {
           throw new Error(
@@ -59,7 +62,15 @@ export default function StatsDashboard() {
 
     fetchCloudTelemetry();
     const interval = setInterval(fetchCloudTelemetry, 120000); // Refresh every 2 mins
-    return () => clearInterval(interval);
+    const onVisible = () => {
+      if (!document.hidden) fetchCloudTelemetry();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   const formatTimestamp = (isoString: string | null) => {
