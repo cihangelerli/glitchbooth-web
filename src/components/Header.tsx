@@ -47,7 +47,7 @@ export default function Header({ currentView, onNavigateToPath }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#131313]/90 backdrop-blur-md border-b border-matrix/20 pr-4 md:px-8 py-4 select-none">
+    <header className="sticky top-0 z-50 bg-[#131313]/95 border-b border-matrix/20 pr-4 md:px-8 py-4 select-none">
       <div className="max-w-[1200px] mx-auto flex items-center justify-between">
         {/* Brand Logo */}
         <div

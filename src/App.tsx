@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import GlitchMarqueeRow from "./components/GlitchMarqueeRow";
@@ -98,27 +98,30 @@ export default function App() {
   });
 
   // Centralized router function that pairs React state updates with window.history
-  const navigateTo = (
-    view: AppView,
-    path: string,
-    image: GalleryImage | null = null,
-    replace: boolean = false,
-    event: EventConfig | null = null,
-  ) => {
-    setCurrentView(view);
-    setSelectedImage(image);
-    setActiveEvent(event);
+  const navigateTo = useCallback(
+    (
+      view: AppView,
+      path: string,
+      image: GalleryImage | null = null,
+      replace: boolean = false,
+      event: EventConfig | null = null,
+    ) => {
+      setCurrentView(view);
+      setSelectedImage(image);
+      setActiveEvent(event);
 
-    if (window.location.pathname !== path) {
-      if (replace) {
-        window.history.replaceState({ view, id: image?.id, image }, "", path);
-      } else {
-        window.history.pushState({ view, id: image?.id, image }, "", path);
+      if (window.location.pathname !== path) {
+        if (replace) {
+          window.history.replaceState({ view, id: image?.id, image }, "", path);
+        } else {
+          window.history.pushState({ view, id: image?.id, image }, "", path);
+        }
       }
-    }
 
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [],
+  );
 
   const navigateToPath = (path: string) => {
     if (window.location.pathname !== path) {
@@ -234,21 +237,14 @@ export default function App() {
   }, [imagesPool]);
 
   const backgroundRows = useMemo(() => {
-    const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES;
-    const generateRobustRow = () => {
-      let uniqueRowSelection = shuffleArray(base);
-      while (uniqueRowSelection.length < 12) {
-        uniqueRowSelection = [...uniqueRowSelection, ...shuffleArray(base)];
-      }
-      return uniqueRowSelection;
-    };
-
-    return {
-      row1: generateRobustRow(),
-      row2: generateRobustRow(),
-      row3: generateRobustRow(),
-      row4: generateRobustRow(),
-    };
+    const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES; // already shuffled
+    const PER_ROW = 24;
+    const slice = (row: number) =>
+      Array.from(
+        { length: PER_ROW },
+        (_, i) => base[(row * PER_ROW + i) % base.length],
+      );
+    return { row1: slice(0), row2: slice(1), row3: slice(2), row4: slice(3) };
   }, [imagesPool]);
 
   const handleLearnMore = () => {
@@ -264,9 +260,10 @@ export default function App() {
     navigateToPath("/archive");
   };
 
-  const handleSelectImageAndInspect = (img: GalleryImage) => {
-    navigateTo("details", `/p/${img.id}`, img);
-  };
+  const handleSelectImageAndInspect = useCallback(
+    (img: GalleryImage) => navigateTo("details", `/p/${img.id}`, img),
+    [navigateTo],
+  );
 
   // If the visitor navigated inside the app, go back to where they came from
   // (home marquee, archive, event page). Cold QR arrivals have no app state,

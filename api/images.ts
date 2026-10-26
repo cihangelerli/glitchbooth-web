@@ -123,26 +123,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // 2. Default fetch: Automatically loop through all ImageKit pages (batches of 100)
-    let allFiles: any[] = [];
-    let currentSkip = 0;
-    const batchSize = 100;
-    let hasMore = true;
+    // 2. Default fetch: up to 1000 captures. All pages are requested in
+    //    parallel (plus a 1-item probe to learn whether more exist).
+    const BATCH = 100;
+    const MAX_FILES = 1000;
 
-    while (hasMore && allFiles.length < 1000) {
-      const files = await fetchFiles(currentSkip, batchSize);
-      if (!Array.isArray(files) || files.length === 0) {
-        hasMore = false;
-        break;
-      }
-      allFiles = allFiles.concat(files);
+    const [pages, probe] = await Promise.all([
+      Promise.all(
+        Array.from({ length: MAX_FILES / BATCH }, (_, i) =>
+          fetchFiles(i * BATCH, BATCH),
+        ),
+      ),
+      fetchFiles(MAX_FILES, 1),
+    ]);
 
-      if (files.length < batchSize) {
-        hasMore = false;
-      } else {
-        currentSkip += batchSize;
-      }
-    }
+    const allFiles = pages.flatMap((page) => (Array.isArray(page) ? page : []));
 
     res.setHeader(
       "Cache-Control",
@@ -150,7 +145,7 @@ export default async function handler(req: any, res: any) {
     );
     return res.status(200).json({
       images: allFiles.filter(isCaptureFile).map(formatFile).sort(newestFirst),
-      hasMore,
+      hasMore: Array.isArray(probe) && probe.length > 0,
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });

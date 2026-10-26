@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { GalleryImage } from "../types";
 import { timestampFromCaptureId } from "../utils/captureTime";
+import { thumbUrl } from "../utils/imageUrl";
 
 interface ArchiveViewProps {
   images: GalleryImage[];
@@ -53,54 +54,52 @@ export default function ArchiveView({
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  // 1. Core Filter Engine
-  const filteredImages = images.filter((img) => {
-    const title = img.title || "";
-    const filename = img.filename || (img as any).name || "";
-    const shutter = img.shutter || "1/60s";
-    const iso = img.iso || "ISO 400";
+  const sortedAndFilteredImages = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    weekAgo.setHours(0, 0, 0, 0);
 
-    const matchesSearch =
-      title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      filename.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      shutter.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      iso.toLowerCase().includes(searchQuery.toLowerCase());
+    // Parse each timestamp once, not on every sort comparison
+    const rows = images.map((img) => ({ img, time: getSafeTime(img) }));
 
-    if (!matchesSearch) return false;
+    const filtered = rows.filter(({ img, time }) => {
+      if (q) {
+        const haystack = [
+          img.title,
+          img.filename || (img as any).name,
+          img.shutter || "1/60s",
+          img.iso || "ISO 400",
+        ]
+          .join("\n")
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (dateFilter === "today") return time >= startOfToday.getTime();
+      if (dateFilter === "week") return time >= weekAgo.getTime();
+      return true;
+    });
 
-    // Temporal Filter Computations
-    if (dateFilter === "all") return true;
+    filtered.sort((a, b) =>
+      sortBy === "latest"
+        ? b.time - a.time
+        : sortBy === "oldest"
+          ? a.time - b.time
+          : (a.img.filename || "").localeCompare(b.img.filename || ""),
+    );
 
-    const imgTime = getSafeTime(img);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    return filtered.map((row) => row.img);
+  }, [images, searchQuery, dateFilter, sortBy]);
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    oneWeekAgo.setHours(0, 0, 0, 0);
-
-    if (dateFilter === "today") {
-      return imgTime >= today.getTime();
-    }
-    if (dateFilter === "week") {
-      return imgTime >= oneWeekAgo.getTime();
-    }
-
-    return true;
-  });
-
-  // 2. Core Sorting Engine (Enforces Clean Sequential Order regardless of input state)
-  const sortedAndFilteredImages = [...filteredImages].sort((a, b) => {
-    const timeA = getSafeTime(a);
-    const timeB = getSafeTime(b);
-
-    if (sortBy === "latest") return timeB - timeA; // High numbers (Newer dates) first
-    if (sortBy === "oldest") return timeA - timeB; // Low numbers (Older dates) first
-    if (sortBy === "filename") {
-      return (a.filename || "").localeCompare(b.filename || "");
-    }
-    return 0;
-  });
+  // Render 60 cards at a time instead of up to 1000
+  const PAGE_SIZE = 60;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [searchQuery, dateFilter, sortBy]);
+  const visibleImages = sortedAndFilteredImages.slice(0, visibleCount);
 
   const isFiltering = searchQuery.trim().length > 0 || dateFilter !== "all";
 
@@ -233,60 +232,75 @@ export default function ArchiveView({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {sortedAndFilteredImages.map((img) => (
-            <div
-              key={img.id}
-              onClick={() => onImageSelect(img)}
-              className="group relative border border-[#3b4b37] hover:border-[#00ff41] bg-[#0c0c0c] flex flex-col p-2.5 transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.5)] cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,65,0.15)]"
-              style={{ borderRadius: "0px" }}
-            >
-              {/* Outer corner marks */}
-              <span className="absolute top-0 left-0 w-1 h-3 bg-[#0a0] opacity-30 group-hover:opacity-100" />
-              <span className="absolute top-0 left-0 w-3 h-1 bg-[#0a0] opacity-30 group-hover:opacity-100" />
-              <span className="absolute bottom-0 right-0 w-1 h-3 bg-[#0a0] opacity-30 group-hover:opacity-100" />
-              <span className="absolute bottom-0 right-0 w-3 h-1 bg-[#0a0] opacity-30 group-hover:opacity-100" />
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {visibleImages.map((img) => (
+              <div
+                key={img.id}
+                onClick={() => onImageSelect(img)}
+                className="group relative border border-[#3b4b37] hover:border-[#00ff41] bg-[#0c0c0c] flex flex-col p-2.5 transition-all duration-300 shadow-[0_4px_12px_rgba(0,0,0,0.5)] cursor-pointer hover:shadow-[0_0_15px_rgba(0,255,65,0.15)]"
+                style={{ borderRadius: "0px" }}
+              >
+                {/* Outer corner marks */}
+                <span className="absolute top-0 left-0 w-1 h-3 bg-[#0a0] opacity-30 group-hover:opacity-100" />
+                <span className="absolute top-0 left-0 w-3 h-1 bg-[#0a0] opacity-30 group-hover:opacity-100" />
+                <span className="absolute bottom-0 right-0 w-1 h-3 bg-[#0a0] opacity-30 group-hover:opacity-100" />
+                <span className="absolute bottom-0 right-0 w-3 h-1 bg-[#0a0] opacity-30 group-hover:opacity-100" />
 
-              {/* CRT Phosphor Screen overlay */}
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,255,65,0.04)_50%)] bg-[size:100%_4px] pointer-events-none z-10" />
+                {/* CRT Phosphor Screen overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,_rgba(0,255,65,0.04)_50%)] bg-[size:100%_4px] pointer-events-none z-10" />
 
-              {/* Dynamic Image Container */}
-              <div className="relative aspect-square w-full overflow-hidden bg-black border border-matrix/10">
-                <img
-                  src={img.url}
-                  alt={img.title}
-                  loading="lazy"
-                  decoding="async"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
+                {/* Dynamic Image Container */}
+                <div className="relative aspect-square w-full overflow-hidden bg-black border border-matrix/10">
+                  <img
+                    src={thumbUrl(img.url)}
+                    alt={img.title}
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
 
-                {/* Glitch Overlay Indicator */}
-                <span className="absolute top-2 left-2 bg-black/80 text-matrix border border-matrix/20 px-1 py-0.5 font-mono text-[8px] z-10">
-                  {img.filename}
-                </span>
-              </div>
-
-              {/* Photo Meta and Specs */}
-              <div className="mt-3 font-mono text-[10px] space-y-1 pt-2.5 border-t border-matrix/10">
-                <div className="flex justify-between items-center">
-                  <span className="text-[#84967e] font-bold uppercase truncate max-w-[130px]">
-                    {img.title}
-                  </span>
-                  <span className="text-cyber text-[9px]">{img.shutter}</span>
-                </div>
-                <div className="flex justify-between text-[#84967e] text-[9px]">
-                  <span>
-                    {(
-                      timestampFromCaptureId(img.id) ??
-                      (img.timestamp || img.date || "")
-                    ).split(/[T ]/)[0] || "UNKNOWN_DATE"}
+                  {/* Glitch Overlay Indicator */}
+                  <span className="absolute top-2 left-2 bg-black/80 text-matrix border border-matrix/20 px-1 py-0.5 font-mono text-[8px] z-10">
+                    {img.filename}
                   </span>
                 </div>
+
+                {/* Photo Meta and Specs */}
+                <div className="mt-3 font-mono text-[10px] space-y-1 pt-2.5 border-t border-matrix/10">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[#84967e] font-bold uppercase truncate max-w-[130px]">
+                      {img.title}
+                    </span>
+                    <span className="text-cyber text-[9px]">{img.shutter}</span>
+                  </div>
+                  <div className="flex justify-between text-[#84967e] text-[9px]">
+                    <span>
+                      {(
+                        timestampFromCaptureId(img.id) ??
+                        (img.timestamp || img.date || "")
+                      ).split(/[T ]/)[0] || "UNKNOWN_DATE"}
+                    </span>
+                  </div>
+                </div>
               </div>
+            ))}
+          </div>
+
+          {visibleCount < sortedAndFilteredImages.length && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+                className="font-mono text-xs border border-[#00ff41] px-6 py-3 font-bold text-[#00ff41] hover:bg-[#00ff41] hover:text-black transition-all cursor-pointer"
+                style={{ borderRadius: "0px" }}
+              >
+                LOAD_MORE_CAPTURES [{visibleImages.length}/
+                {sortedAndFilteredImages.length}]
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );

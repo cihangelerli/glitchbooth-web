@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -149,4 +148,33 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #ffabf3;
+}
+
+/* ---------- Marquee rows (GlitchMarqueeRow) ---------- */
+@keyframes marquee-scroll {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+
+.marquee-track {
+  display: flex;
+  gap: 1rem;
+  padding-right: 1rem; /* equals the gap, so -50% loops seamlessly */
+  width: max-content;
+  will-change: transform;
+  animation: marquee-scroll var(--marquee-duration, 120s) linear infinite;
+}
+.marquee-track[data-direction="right"] { animation-direction: reverse; }
+.marquee-track[data-offscreen="true"] { animation-play-state: paused; }
+.marquee-row:hover .marquee-track[data-interactive="true"] {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track { animation: none; }
+}
+
+/* Lighter CRT effects on phones */
+@media (max-width: 768px) {
+  .scanline-moving-bar { display: none; }
 }

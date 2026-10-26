@@ -4,6 +4,7 @@ import type { GalleryImage } from "../types";
 import type { EventConfig } from "./types";
 import BlinkingCursor from "./BlinkingCursor";
 import { handleLinkClick } from "./navigate";
+import { thumbUrl } from "../utils/imageUrl";
 
 const PAGE_SIZE = 100;
 
@@ -120,7 +121,7 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
                   >
                     <div className="aspect-square">
                       <img
-                        src={image.url}
+                        src={thumbUrl(image.url)}
                         alt={image.title}
                         loading="lazy"
                         decoding="async"
