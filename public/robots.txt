@@ -1,14 +1,20 @@
-# https://www.robotstxt.org/robotstxt.html
+# Glitch Booth robots.txt
 
-# Allow all search engines (Google, Bing, DuckDuckGo, etc.) to crawl the entire site
+# AI training / dataset crawlers: not permitted anywhere
+User-agent: GPTBot
+User-agent: ClaudeBot
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: Meta-ExternalAgent
+User-agent: Bytespider
+User-agent: cohere-ai
+User-agent: Diffbot
+Disallow: /
+
+# Everyone else: allowed, except the JSON API
 User-agent: *
-Allow: /
+Disallow: /api/
 
-# Prevent search engines from crawling temporary or broken paths if they ever exist
-Disallow: /cgi-bin/
-
-# Host domain definition
-Host: https://glitchbooth.online
-
-# Link to your sitemap (if you choose to generate one later)
 Sitemap: https://glitchbooth.online/sitemap.xml

@@ -1,0 +1,16 @@
+{
+    "specVersion": "1.0",
+    "host": {
+        "displayName": "Glitch Booth",
+        "identifier": "did:web:glitchbooth.online"
+    },
+    "entries": [
+        {
+            "identifier": "urn:air:glitchbooth.online:knowledge:llms-txt",
+            "displayName": "Glitch Booth site guide (llms.txt)",
+            "type": "text/plain",
+            "url": "https://glitchbooth.online/llms.txt",
+            "description": "Overview of the Glitch Booth website: what the project is and where to find its main pages."
+        }
+    ]
+}

@@ -1,0 +1,15 @@
+# GLITCH BOOTH
+
+> Glitch Booth is an experimental photo booth installation by Dirtcake Studio. It takes photos through a deliberately broken, hardware-driven glitch pipeline and prints them as thermal receipts, each with a QR code that links to the capture on this website.
+
+## Site
+
+- [Home](https://glitchbooth.online/): Landing page with system specifications, operational analytics and a contact form
+- [Archive](https://glitchbooth.online/archive): Gallery of booth captures
+- [Events](https://glitchbooth.online/events): Directory of events where the booth has appeared
+
+## Project
+
+- [GitHub repository](https://github.com/cihangelerli/glitchbooth): Source code for this website
+- [Dirtcake Studio](https://dirtcakestudio.com): The studio that builds and operates Glitch Booth
+- [Instagram](https://instagram.com/glitchbooth.online): Project updates
