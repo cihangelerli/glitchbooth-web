@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from "motion/react";
 
 interface HeaderProps {
   currentView: string;
-  setView: (v: string) => void;
+  setView?: (v: string) => void;
   onNavigateToPath: (path: string) => void;
 }
 
-export default function Header({ currentView, setView, onNavigateToPath }: HeaderProps) {
+export default function Header({ currentView, onNavigateToPath }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = [
@@ -26,14 +26,13 @@ export default function Header({ currentView, setView, onNavigateToPath }: Heade
     } else {
       // It's a landing page section scroll
       if (currentView !== "home") {
-        setView("home");
-        window.history.pushState({ view: "home" }, "", "/"); // Keeps URL updated to '/' when leaving archive or details
+        onNavigateToPath("/");
         setTimeout(() => {
           const element = document.getElementById(target);
           if (element) {
             element.scrollIntoView({ behavior: "smooth", block: "start" });
           }
-        }, 80);
+        }, 150);
       } else {
         const element = document.getElementById(target);
         if (element) {

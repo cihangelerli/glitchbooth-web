@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
-import { getEventsForDirectory } from "./registry";
-import type { EventConfig, EventStatus } from "./types";
+import { getEventsForDirectory, resolveEventStatus } from "./registry";
+import { handleLinkClick } from "./navigate";
+import type { EventStatus } from "./types";
 
 const STATUS_CONFIG: Record<
   EventStatus,
@@ -29,32 +30,6 @@ const STATUS_CONFIG: Record<
   },
 };
 
-function resolveEventStatus(event: EventConfig): EventStatus {
-  // 1. Manual override: if explicitly marked as cancelled, keep it cancelled
-  if (event.status === "cancelled") {
-    return "cancelled";
-  }
-
-  // 2. Automatic single-day or multi-day date range comparison against local 'YYYY-MM-DD'
-  if (event.eventDate) {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const today = `${year}-${month}-${day}`;
-
-    const startDate = event.eventDate;
-    const endDate = event.endDate || event.eventDate;
-
-    if (today >= startDate && today <= endDate) return "active";
-    if (today < startDate) return "upcoming";
-    if (today > endDate) return "past";
-  }
-
-  // 3. Fallback to event.status or "past"
-  return event.status || "past";
-}
-
 export default function EventsPage() {
   const events = getEventsForDirectory();
 
@@ -62,6 +37,7 @@ export default function EventsPage() {
     <div className="w-full max-w-[1200px] mx-auto px-4 py-8 font-mono">
       <a
         href="/"
+        onClick={(e) => handleLinkClick(e, "/")}
         className="inline-flex items-center gap-1.5 text-xs text-[#84967e] hover:text-[#00ff41] transition-colors"
       >
         <ArrowLeft size={13} /> [ RETURN_TO_GLITCHBOOTH ]
@@ -83,6 +59,7 @@ export default function EventsPage() {
             <a
               key={event.slug}
               href={`/${event.slug}`}
+              onClick={(e) => handleLinkClick(e, `/${event.slug}`)}
               className="group block border border-matrix/30 bg-black p-4 hover:border-[#00ff41] hover:shadow-[0_0_18px_rgba(0,255,65,.18)] transition-all relative"
             >
               <div className="aspect-[3/1] bg-[#061008] border border-matrix/10 flex items-center justify-center overflow-hidden p-3 relative">

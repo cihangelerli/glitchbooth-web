@@ -10,12 +10,17 @@ export default function ContactForm() {
     "idle" | "transmitting" | "success" | "error"
   >("idle");
   const [logLines, setLogLines] = useState<string[]>([]);
+  const [errorInfo, setErrorInfo] = useState({ title: "", detail: "" });
+  const failWith = (title: string, detail: string) => {
+    setErrorInfo({ title, detail });
+    setStatus("error");
+  };
 
   // 1. Converted to async function to handle the live API response sequence
   const handleTransmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!name || !email || !message) {
-      setStatus("error");
+      failWith("INPUT_VALIDATION_ERROR", "Please fill in every field and retry.");
       return;
     }
 
@@ -71,7 +76,10 @@ export default function ContactForm() {
           ...prev,
           "CRITICAL_FAILURE: GATEWAY REJECTED PACKET ATOM",
         ]);
-        setStatus("error");
+        failWith(
+          "TRANSMISSION_REJECTED",
+          "The gateway refused the packet. Try again in a moment.",
+        );
       }
     } catch (error) {
       // Local network dropped or connection blocked
@@ -79,7 +87,10 @@ export default function ContactForm() {
         ...prev,
         "CRITICAL_FAILURE: UPLINK TIMEOUT DEGRADATION",
       ]);
-      setStatus("error");
+      failWith(
+        "UPLINK_FAILURE",
+        "Network unreachable. Check your connection and retry.",
+      );
     }
   };
 
@@ -210,10 +221,8 @@ export default function ContactForm() {
                   >
                     <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                     <div>
-                      <div className="font-bold">INPUT_VALIDATION_ERROR</div>
-                      <div className="text-[9px] text-magenta">
-                        Please check your parameters and retry transmission.
-                      </div>
+                      <div className="font-bold">{errorInfo.title}</div>
+                      <div className="text-[9px] text-magenta">{errorInfo.detail}</div>
                     </div>
                   </motion.div>
                 )}

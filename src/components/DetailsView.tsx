@@ -3,6 +3,7 @@ import { Download, Instagram } from "lucide-react";
 import { GalleryImage } from "../types";
 import { ArrowLeft } from "lucide-react";
 import type { EventConfig } from "../events/types";
+import { timestampFromCaptureId } from "../utils/captureTime";
 
 interface DetailsViewProps {
   image: GalleryImage;
@@ -12,37 +13,41 @@ interface DetailsViewProps {
 }
 
 // Formats authoritative ISO timestamp into UTC string with safety fallback
-function formatCaptureTimestamp(
-  isoString?: string,
-  fallbackId?: string,
-): string {
-  if (isoString) {
-    const date = new Date(isoString);
-    if (!isNaN(date.getTime())) {
-      const months = [
-        "JAN",
-        "FEB",
-        "MAR",
-        "APR",
-        "MAY",
-        "JUN",
-        "JUL",
-        "AUG",
-        "SEP",
-        "OCT",
-        "NOV",
-        "DEC",
-      ];
-      const month = months[date.getUTCMonth()];
-      const day = String(date.getUTCDate()).padStart(2, "0");
-      const year = date.getUTCFullYear();
-      const hours = String(date.getUTCHours()).padStart(2, "0");
-      const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-      const seconds = String(date.getUTCSeconds()).padStart(2, "0");
-      return `${month} ${day}, ${year} // ${hours}:${minutes}:${seconds} UTC`;
-    }
+function formatCaptureTimestamp(raw?: string | number): string {
+  if (raw === undefined || raw === null || raw === "") {
+    return "TIMESTAMP_UNAVAILABLE";
   }
-  return fallbackId ? `CAPTURE_${fallbackId}` : "TIMESTAMP_UNAVAILABLE";
+
+  let value: string | number = typeof raw === "string" ? raw.trim() : raw;
+  // Safari/iOS can't parse "YYYY-MM-DD HH:MM:SS"; make it ISO-style.
+  if (typeof value === "string" && value.includes(" ") && !value.includes("T")) {
+    value = value.replace(" ", "T");
+  }
+
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "TIMESTAMP_UNAVAILABLE";
+
+  const months = [
+    "JAN",
+    "FEB",
+    "MAR",
+    "APR",
+    "MAY",
+    "JUN",
+    "JUL",
+    "AUG",
+    "SEP",
+    "OCT",
+    "NOV",
+    "DEC",
+  ];
+  const month = months[date.getUTCMonth()];
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const year = date.getUTCFullYear();
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
+  return `${month} ${day}, ${year} // ${hours}:${minutes}:${seconds} UTC`;
 }
 
 export default function DetailsView({
@@ -51,23 +56,38 @@ export default function DetailsView({
   onBackToHome,
   event,
 }: DetailsViewProps) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile] = useState<boolean>(
+    () =>
+      window.matchMedia("(pointer: coarse)").matches &&
+      window.matchMedia("(hover: none)").matches,
+  );
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
+  }, [image.id]);
 
-    // Precise touch-device context tracking
-    const mobileQuery =
-      window.matchMedia("(pointer: coarse)").matches ||
-      window.matchMedia("(hover: none)").matches ||
-      navigator.maxTouchPoints > 0;
+  // Real image load state (replaces the hardcoded IMAGE_LOADED_OK)
+  const [imageState, setImageState] = useState<"loading" | "ok" | "error">(
+    "loading",
+  );
+  useEffect(() => {
+    setImageState("loading");
+  }, [image.url]);
 
-    setIsMobile(mobileQuery);
-  }, [image]);
+  const statusText =
+    imageState === "error"
+      ? "[ SYS_FAULT ] IMAGE_LOAD_FAILED"
+      : imageState === "loading"
+        ? "[ SYS_BUSY ] LOADING_IMAGE..."
+        : "[ SYS_READY ] IMAGE_LOADED_OK";
+  const statusClass = imageState === "error" ? "text-[#fe00fe]" : "";
+  const backLabel = event ? "[ RETURN_TO_EVENT ]" : "[ RETURN_TO_GALLERY ]";
 
   const fileName = image.filename || `${image.id}.JPG`;
   const downloadFileName = image.filename || `${image.id}.jpg`;
-  const dynamicTimestamp = formatCaptureTimestamp(image.timestamp, image.id);
+  const dynamicTimestamp = formatCaptureTimestamp(
+    timestampFromCaptureId(image.id) ?? image.timestamp,
+  );
 
   // --- MOBILE TRACK: Native System Share Sheet Handler ---
   const handleMobileShare = async () => {
@@ -132,7 +152,7 @@ export default function DetailsView({
               size={13}
               className="group-hover:-translate-x-1 transition-transform"
             />
-            <span>[ RETURN_TO_GALLERY ]</span>
+            <span>{backLabel}</span>
           </button>
         </div>
 
@@ -158,6 +178,8 @@ export default function DetailsView({
                 src={image.url}
                 alt={`Glitch Capture ${image.id}`}
                 referrerPolicy="no-referrer"
+                onLoad={() => setImageState("ok")}
+                onError={() => setImageState("error")}
                 className="w-full max-h-[70vh] object-contain border border-[#00e639]/10 shadow-[0_4px_30px_rgba(0,0,0,0.8)] touch-manipulation select-auto"
               />
             </div>
@@ -165,8 +187,8 @@ export default function DetailsView({
             <div className="border-t border-[#00e639]/20 bg-black/90 px-4 py-3 flex flex-col gap-2 text-xs text-[#00e639] font-mono">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2.5 bg-[#00e639] inline-block animate-pulse shrink-0" />
-                <span className="font-bold tracking-widest">
-                  [ SYS_READY ] IMAGE_LOADED_OK
+                <span className={`font-bold tracking-widest ${statusClass}`}>
+                  {statusText}
                 </span>
               </div>
               <div className="text-[11px] opacity-90 truncate">
@@ -302,7 +324,7 @@ export default function DetailsView({
             size={13}
             className="group-hover:-translate-x-1 transition-transform"
           />
-          <span>[ RETURN_TO_GALLERY ]</span>
+          <span>{backLabel}</span>
         </button>
       </div>
 
@@ -328,6 +350,8 @@ export default function DetailsView({
                 src={image.url}
                 alt={`Glitch Capture ${image.id}`}
                 referrerPolicy="no-referrer"
+                onLoad={() => setImageState("ok")}
+                onError={() => setImageState("error")}
                 className="w-full max-h-[560px] object-contain border border-[#00e639]/10 shadow-[0_4px_30px_rgba(0,0,0,0.8)]"
               />
             </div>
@@ -335,8 +359,8 @@ export default function DetailsView({
             <div className="border-t border-[#00e639]/20 bg-black/90 px-4 py-3 flex flex-row items-center justify-between text-xs text-[#00e639] font-mono">
               <div className="flex items-center space-x-2">
                 <span className="w-2 h-2.5 bg-[#00e639] inline-block animate-pulse shrink-0" />
-                <span className="font-bold tracking-widest">
-                  [ SYS_READY ] IMAGE_LOADED_OK
+                <span className={`font-bold tracking-widest ${statusClass}`}>
+                  {statusText}
                 </span>
               </div>
               <div className="text-[11px] opacity-90 truncate pl-2">

@@ -15,6 +15,7 @@ import EventPage from "./events/EventPage";
 import { getEventBySlug } from "./events/registry";
 import { getEventCaptureUrl } from "./events/eventCapture";
 import type { EventConfig } from "./events/types";
+import { timestampFromCaptureId } from "./utils/captureTime";
 
 type AppView =
   | "home"
@@ -58,6 +59,27 @@ function resolveRoute(pathname: string): ResolvedRoute {
   return { kind: "not-found" };
 }
 
+const IMAGEKIT_CDN = "https://ik.imagekit.io/w6lsfsw8j";
+
+// Fallback for deep links with no loaded metadata. The ID encodes the capture
+// time; "" renders as TIMESTAMP_UNAVAILABLE for non-numeric IDs.
+function buildFallbackImage(id: string, url: string): GalleryImage {
+  return {
+    id,
+    url,
+    filename: `${id}_color.jpg`,
+    title: `CAPTURE_${id}`,
+    timestamp: timestampFromCaptureId(id) ?? "",
+  };
+}
+
+// Real image metadata saved by navigateTo() in the current history entry.
+// Survives back/forward and page reload within the same entry.
+function getImageFromHistoryState(id: string): GalleryImage | null {
+  const state = window.history.state as { image?: GalleryImage } | null;
+  return state?.image && state.image.id === id ? state.image : null;
+}
+
 export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
   const [hasMoreCaptures, setHasMoreCaptures] = useState(false);
@@ -89,9 +111,9 @@ export default function App() {
 
     if (window.location.pathname !== path) {
       if (replace) {
-        window.history.replaceState({ view, id: image?.id }, "", path);
+        window.history.replaceState({ view, id: image?.id, image }, "", path);
       } else {
-        window.history.pushState({ view, id: image?.id }, "", path);
+        window.history.pushState({ view, id: image?.id, image }, "", path);
       }
     }
 
@@ -121,9 +143,6 @@ export default function App() {
 
   useEffect(() => {
     async function initializeProjectData() {
-      let activePool = STOCK_GALLERY_IMAGES;
-      const path = window.location.pathname;
-
       try {
         const response = await fetch("/api/images");
         const payload = response.ok
@@ -131,56 +150,29 @@ export default function App() {
           : null;
 
         const liveImages = Array.isArray(payload?.images) ? payload.images : [];
-
         const pool = liveImages.length > 0 ? liveImages : STOCK_GALLERY_IMAGES;
 
-        const randomizedLoad = shuffleArray(pool);
-        activePool = randomizedLoad;
-        setImagesPool(randomizedLoad);
+        setImagesPool(shuffleArray(pool));
         setHasMoreCaptures(liveImages.length > 0 && payload?.hasMore === true);
       } catch (err) {
         console.error(
           "ImageKit sync failed, falling back to stock assets:",
           err,
         );
-        const fallback = shuffleArray(STOCK_GALLERY_IMAGES);
-        activePool = fallback;
-        setImagesPool(fallback);
+        setImagesPool(shuffleArray(STOCK_GALLERY_IMAGES));
         setHasMoreCaptures(false);
       } finally {
         setLoading(false);
-      }
-
-      if (path.startsWith("/p/")) {
-        const photoId = path.split("/p/")[1];
-        if (photoId) {
-          const existingMatch = activePool.find((img) => img.id === photoId);
-          if (existingMatch) {
-            setSelectedImage(existingMatch);
-          } else {
-            const deepLinkedImage = {
-              id: photoId,
-              url: `https://ik.imagekit.io/w6lsfsw8j/booth_captures/${photoId}_color.jpg`,
-              filename: `${photoId}_color.jpg`,
-              title: `CAPTURE_${photoId}`,
-              timestamp: "2026-06-03 00:00:00",
-            } as GalleryImage;
-            setSelectedImage(deepLinkedImage);
-          }
-          setCurrentView("details");
-        }
       }
     }
 
     initializeProjectData();
   }, []);
 
-  // Synchronize URL path with React state on mount, image pool updates, and browser popstate navigation
   useEffect(() => {
     const syncViewWithUrl = () => {
-      const path = window.location.pathname.replace(/\/$/, ""); // Strip trailing slash
-
       const route = resolveRoute(window.location.pathname);
+
       if (
         route.kind === "archive" ||
         route.kind === "home" ||
@@ -193,42 +185,48 @@ export default function App() {
         setActiveEvent(null);
       } else if (route.kind === "details") {
         const photoId = route.captureId;
-        if (photoId) {
-          const match = imagesPool.find((img) => img.id === photoId);
-          if (match) {
-            setSelectedImage(match);
-          } else {
-            // Fallback object while imagesPool loads or if ID is missing from live pool
-            setSelectedImage({
-              id: photoId,
-              url: `https://ik.imagekit.io/w6lsfsw8j/booth_captures/${photoId}_color.jpg`,
-              filename: `${photoId}_color.jpg`,
-              title: `CAPTURE_${photoId}`,
-              timestamp: new Date().toISOString(),
-            } as GalleryImage);
-          }
-          setCurrentView("details");
-          setActiveEvent(null);
-        }
-      } else if (route.kind === "event" || route.kind === "event-details") {
+        const poolMatch = imagesPool.find((img) => img.id === photoId);
+        const fromState = getImageFromHistoryState(photoId);
+
+        // Priority: live pool data > saved history data > keep current > bare fallback.
+        // "Keep current" stops the pool finishing its load from clobbering an
+        // image that already has good metadata.
+        setSelectedImage(
+          (prev) =>
+            poolMatch ??
+            fromState ??
+            (prev?.id === photoId
+              ? prev
+              : buildFallbackImage(
+                  photoId,
+                  `${IMAGEKIT_CDN}/booth_captures/${photoId}_color.jpg`,
+                )),
+        );
+        setCurrentView("details");
+        setActiveEvent(null);
+      } else if (route.kind === "event") {
         setActiveEvent(route.event);
-        if (route.kind === "event") {
-          setCurrentView("event");
-          setSelectedImage(null);
-        } else {
-          setSelectedImage({
-            id: route.captureId,
-            url: getEventCaptureUrl(route.event, route.captureId),
-            filename: `${route.captureId}_color.jpg`,
-            title: `CAPTURE_${route.captureId}`,
-            timestamp: new Date().toISOString(),
-          } as GalleryImage);
-          setCurrentView("event-details");
-        }
+        setCurrentView("event");
+        setSelectedImage(null);
+      } else if (route.kind === "event-details") {
+        const { event, captureId } = route;
+        const fromState = getImageFromHistoryState(captureId);
+
+        setActiveEvent(event);
+        setSelectedImage(
+          (prev) =>
+            fromState ??
+            (prev?.id === captureId
+              ? prev
+              : buildFallbackImage(
+                  captureId,
+                  getEventCaptureUrl(event, captureId),
+                )),
+        );
+        setCurrentView("event-details");
       }
     };
 
-    // Run synchronization immediately on load/data hydration
     syncViewWithUrl();
 
     window.addEventListener("popstate", syncViewWithUrl);
@@ -270,6 +268,17 @@ export default function App() {
     navigateTo("details", `/p/${img.id}`, img);
   };
 
+  // If the visitor navigated inside the app, go back to where they came from
+  // (home marquee, archive, event page). Cold QR arrivals have no app state,
+  // so send them to the fallback instead.
+  const goBackFromDetails = (fallbackPath: string) => {
+    if (window.history.state?.view) {
+      window.history.back();
+    } else {
+      navigateToPath(fallbackPath);
+    }
+  };
+
   if (currentView === "slideshow") {
     return <Slideshow images={imagesPool} loading={loading} />;
   }
@@ -306,7 +315,13 @@ export default function App() {
           <DetailsView
             image={selectedImage}
             event={activeEvent}
-            onBackToArchive={() => navigateToPath(`/${activeEvent.slug}`)}
+            onBackToArchive={() => goBackFromDetails(`/${activeEvent.slug}`)}
+            onBackToHome={handleViewHome}
+          />
+        ) : currentView === "details" && selectedImage ? (
+          <DetailsView
+            image={selectedImage}
+            onBackToArchive={() => goBackFromDetails("/archive")}
             onBackToHome={handleViewHome}
           />
         ) : currentView === "events" ? (
@@ -398,14 +413,6 @@ export default function App() {
                 onImageSelect={handleSelectImageAndInspect}
                 onBackToHome={handleViewHome}
                 onRandomize={handleRandomizeImages}
-              />
-            )}
-
-            {currentView === "details" && selectedImage && (
-              <DetailsView
-                image={selectedImage}
-                onBackToArchive={handleViewArchive}
-                onBackToHome={handleViewHome}
               />
             )}
           </>

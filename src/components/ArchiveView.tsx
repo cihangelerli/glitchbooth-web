@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import { GalleryImage } from "../types";
+import { timestampFromCaptureId } from "../utils/captureTime";
 
 interface ArchiveViewProps {
   images: GalleryImage[];
@@ -32,6 +33,9 @@ export default function ArchiveView({
 
   // Cross-Browser Bulletproof Millisecond Parser (Fixes Safari/iOS NaN sorting error)
   const getSafeTime = (img: GalleryImage): number => {
+    const idTime = timestampFromCaptureId(img.id);
+    if (idTime) return new Date(idTime).getTime();
+
     const rawDate = img.timestamp || (img as any).date;
     if (!rawDate) return 0;
 
@@ -251,6 +255,8 @@ export default function ArchiveView({
                 <img
                   src={img.url}
                   alt={img.title}
+                  loading="lazy"
+                  decoding="async"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -271,13 +277,10 @@ export default function ArchiveView({
                 </div>
                 <div className="flex justify-between text-[#84967e] text-[9px]">
                   <span>
-                    {
-                      (
-                        img.timestamp ||
-                        (img as any).date ||
-                        "2026-06-04"
-                      ).split(" ")[0]
-                    }
+                    {(
+                      timestampFromCaptureId(img.id) ??
+                      (img.timestamp || img.date || "")
+                    ).split(/[T ]/)[0] || "UNKNOWN_DATE"}
                   </span>
                 </div>
               </div>

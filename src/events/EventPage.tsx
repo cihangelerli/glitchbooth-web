@@ -3,6 +3,7 @@ import { ArrowLeft, LoaderCircle } from "lucide-react";
 import type { GalleryImage } from "../types";
 import type { EventConfig } from "./types";
 import BlinkingCursor from "./BlinkingCursor";
+import { handleLinkClick } from "./navigate";
 
 const PAGE_SIZE = 100;
 
@@ -65,6 +66,7 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
       <main className="max-w-[1200px] mx-auto px-4 py-10 md:py-16">
         <a
           href="/events"
+          onClick={(e) => handleLinkClick(e, "/events")}
           className="inline-flex items-center gap-1.5 font-mono text-xs text-[#84967e] hover:text-[#00ff41]"
         >
           <ArrowLeft size={13} /> [ ALL_EVENTS ]
@@ -120,6 +122,8 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
                       <img
                         src={image.url}
                         alt={image.title}
+                        loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />

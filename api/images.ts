@@ -1,3 +1,23 @@
+// Capture IDs are Unix-epoch milliseconds minted by the booth
+// (server.py: int(time.time_ns() // 1000000)), so the ID is the true capture time.
+// (Duplicated from src/utils/captureTime.ts because /api is bundled separately.)
+function timestampFromCaptureId(id: string): string | undefined {
+  if (!/^\d{13}$/.test(id)) return undefined;
+  const ms = Number(id);
+  if (ms < 1577836800000 || ms > 4102444800000) return undefined;
+  return new Date(ms).toISOString();
+}
+
+const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/i;
+
+const isCaptureFile = (file: any) =>
+  file?.type !== "folder" &&
+  typeof file?.url === "string" &&
+  typeof file?.name === "string";
+
+// ISO strings sort lexicographically, so newest-first is a plain string compare.
+const newestFirst = (a: any, b: any) => b.timestamp.localeCompare(a.timestamp);
+
 function parseEventSkip(value: unknown): number | undefined {
   if (typeof value !== "string" || !/^\d+$/.test(value)) return undefined;
   return Math.min(Number(value), 100_000);
@@ -29,6 +49,10 @@ export default async function handler(req: any, res: any) {
         ? rawEvent.trim()
         : undefined;
 
+    if (eventSlug && !SLUG_PATTERN.test(eventSlug)) {
+      return res.status(400).json({ error: "Invalid event slug" });
+    }
+
     const imageKitPath = eventSlug
       ? `/booth_captures/${eventSlug}/`
       : "/booth_captures/";
@@ -38,6 +62,7 @@ export default async function handler(req: any, res: any) {
     const fetchFiles = async (skip: number, limit: number) => {
       const query = new URLSearchParams({
         path: imageKitPath,
+        type: "file",
         sort: "DESC_CREATED",
         skip: String(skip),
         limit: String(limit),
@@ -58,13 +83,16 @@ export default async function handler(req: any, res: any) {
 
     const formatFile = (file: any) => {
       const cleanId = file.name.replace("_color.jpg", "").replace(".jpg", "");
+      // True capture time from the ID; ImageKit's createdAt (upload time) is the fallback.
+      const captureIso =
+        timestampFromCaptureId(cleanId) ?? file.createdAt ?? "";
       return {
         id: cleanId,
         url: file.url,
         filename: file.name,
         title: `CAPTURE_${cleanId}`,
-        date: file.createdAt.split("T")[0],
-        timestamp: file.createdAt,
+        date: captureIso.split("T")[0],
+        timestamp: captureIso,
       };
     };
 
@@ -85,8 +113,12 @@ export default async function handler(req: any, res: any) {
         fetchFiles(skip + limit, 1),
       ]);
 
+      res.setHeader(
+        "Cache-Control",
+        "public, s-maxage=30, stale-while-revalidate=120",
+      );
       return res.status(200).json({
-        images: files.map(formatFile),
+        images: files.filter(isCaptureFile).map(formatFile).sort(newestFirst),
         hasMore: nextPageProbe.length > 0,
       });
     }
@@ -112,8 +144,12 @@ export default async function handler(req: any, res: any) {
       }
     }
 
+    res.setHeader(
+      "Cache-Control",
+      "public, s-maxage=30, stale-while-revalidate=120",
+    );
     return res.status(200).json({
-      images: allFiles.map(formatFile),
+      images: allFiles.filter(isCaptureFile).map(formatFile).sort(newestFirst),
       hasMore,
     });
   } catch (error: any) {

@@ -1,8 +1,25 @@
 import { synthistan2026 } from "../events_pages/synthistan-2026/event.config";
 import { watergardencaw2026 } from "../events_pages/watergarden-caw-2026/event.config";
-import type { EventStatus } from "./types";
+import type { EventConfig, EventStatus } from "./types";
 
 export const EVENTS = [synthistan2026, watergardencaw2026] as const;
+
+export function resolveEventStatus(event: EventConfig): EventStatus {
+  if (event.status === "cancelled") return "cancelled";
+
+  if (event.eventDate) {
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const startDate = event.eventDate;
+    const endDate = event.endDate || event.eventDate;
+
+    if (today >= startDate && today <= endDate) return "active";
+    if (today < startDate) return "upcoming";
+    if (today > endDate) return "past";
+  }
+
+  return event.status || "past";
+}
 
 const RESERVED_SLUGS = new Set(["archive", "slideshow", "events", "p", "api"]);
 
@@ -35,11 +52,13 @@ const statusOrder: Record<EventStatus, number> = {
   cancelled: 3,
 };
 
-export function getEventsForDirectory() {
+export function getEventsForDirectory(): EventConfig[] {
   return [...EVENTS].sort((a, b) => {
-    const statusDifference = statusOrder[a.status] - statusOrder[b.status];
+    const statusA = resolveEventStatus(a);
+    const statusB = resolveEventStatus(b);
+    const statusDifference = statusOrder[statusA] - statusOrder[statusB];
     if (statusDifference !== 0) return statusDifference;
-    const direction = a.status === "past" ? -1 : 1;
+    const direction = statusA === "past" ? -1 : 1;
     return direction * a.eventDate.localeCompare(b.eventDate);
   });
 }
