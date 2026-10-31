@@ -40,7 +40,7 @@ export default function StatsDashboard() {
         // SURGICAL TWEAK: Append a dynamic timestamp parameter (?t=...)
         // This forces the CDN and browser to bypass cache on every fetch.
         const response = await fetch(
-          `${baseUrl}?t=${Math.floor(Date.now() / 60000)}`,
+          `${baseUrl}?t=${Math.floor(Date.now() / 1800000)}`,
         );
 
         if (!response.ok) {
@@ -61,7 +61,7 @@ export default function StatsDashboard() {
     }
 
     fetchCloudTelemetry();
-    const interval = setInterval(fetchCloudTelemetry, 120000); // Refresh every 2 mins
+    const interval = setInterval(fetchCloudTelemetry, 3600000); // Refresh every hour
     const onVisible = () => {
       if (!document.hidden) fetchCloudTelemetry();
     };
@@ -276,9 +276,10 @@ export default function StatsDashboard() {
               </div>
 
               <div className="text-[12px] font-mono text-matrix/40 tracking-wide leading-relaxed">
-                * PIPELINE_NOTE: Analytics compilation aggregates operational
-                log sequences generated locally across bare-metal matrices and
-                structured within the telemetry cloud since July 1st, 2026.
+                * PIPELINE_NOTE: Analytics compilation updates are performed
+                hourly onlog sequences generated locally across bare-metal
+                matrices and structured within the telemetry cloud since July
+                1st, 2026.
               </div>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import { synthistan2026 } from "../events_pages/synthistan-2026/event.config";
 import { watergardencaw2026 } from "../events_pages/watergarden-caw-2026/event.config";
+import { testfest } from "../events_pages/testfest/event.config";
 import type { EventConfig, EventStatus } from "./types";
 
-export const EVENTS = [synthistan2026, watergardencaw2026] as const;
+export const EVENTS = [synthistan2026, watergardencaw2026, testfest] as const;
 
 export function resolveEventStatus(event: EventConfig): EventStatus {
   if (event.status === "cancelled") return "cancelled";
