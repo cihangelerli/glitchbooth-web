@@ -11,7 +11,11 @@ function timestampFromCaptureId(id: string): string | undefined {
 // Event folders this API is allowed to list. KEEP IN SYNC with the `slug` in each
 // events_pages/*/event.config.ts. Anything else gets a 404, so unpublished folders
 // under /booth_captures/ can never be enumerated.
-const ALLOWED_EVENT_SLUGS = new Set(["synthistan2026", "watergardencaw2026"]);
+const ALLOWED_EVENT_SLUGS = new Set([
+  "synthistan2026",
+  "watergardencaw2026",
+  "testfest",
+]);
 
 const LIST_URL = "https://api.imagekit.io/v1/files";
 const PAGE_MAX = 100; // per page for events and the home first page
