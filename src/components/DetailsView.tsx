@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Download, Instagram } from "lucide-react";
 import { GalleryImage } from "../types";
 import { ArrowLeft } from "lucide-react";
 import type { EventConfig } from "../events/types";
 import { timestampFromCaptureId } from "../utils/captureTime";
+import { getCleanUrl } from "../utils/cleanCapture";
+import CompareSlider, { type CompareSliderHandle } from "./CompareSlider";
 
 interface DetailsViewProps {
   image: GalleryImage;
@@ -85,16 +87,28 @@ export default function DetailsView({
 
   const fileName = image.filename || `${image.id}.JPG`;
   const downloadFileName = image.filename || `${image.id}.jpg`;
+  const compareRef = useRef<CompareSliderHandle>(null);
+  const cleanUrl = getCleanUrl(image);
   const dynamicTimestamp = formatCaptureTimestamp(
     timestampFromCaptureId(image.id) ?? image.timestamp,
   );
 
+  // Blended composite when the slider is below 100%; otherwise the original file.
+  const getDownloadPayload = async (): Promise<{
+    blob: Blob;
+    fileName: string;
+  }> => {
+    const composite = await compareRef.current?.getComposite();
+    if (composite) return composite;
+    const response = await fetch(image.url);
+    return { blob: await response.blob(), fileName: downloadFileName };
+  };
+
   // --- MOBILE TRACK: Native System Share Sheet Handler ---
   const handleMobileShare = async () => {
     try {
-      const response = await fetch(image.url);
-      const blob = await response.blob();
-      const file = new File([blob], downloadFileName, { type: blob.type });
+      const { blob, fileName } = await getDownloadPayload();
+      const file = new File([blob], fileName, { type: blob.type });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -114,13 +128,12 @@ export default function DetailsView({
   // --- DESKTOP TRACK: Programmatic Blob Stream Download ---
   const handleDesktopDownload = async () => {
     try {
-      const response = await fetch(image.url);
-      const blob = await response.blob();
+      const { blob, fileName } = await getDownloadPayload();
       const localUrl = window.URL.createObjectURL(blob);
 
       const downloadLink = document.createElement("a");
       downloadLink.href = localUrl;
-      downloadLink.download = downloadFileName;
+      downloadLink.download = fileName;
 
       document.body.appendChild(downloadLink);
       downloadLink.click();
@@ -174,13 +187,16 @@ export default function DetailsView({
             </div>
 
             <div className="bg-[#080808] p-3 flex items-center justify-center relative">
-              <img
-                src={image.url}
+              <CompareSlider
+                key={image.id}
+                ref={compareRef}
+                imageId={image.id}
+                mutatedUrl={image.url}
+                cleanUrl={cleanUrl}
                 alt={`Glitch Capture ${image.id}`}
-                referrerPolicy="no-referrer"
-                onLoad={() => setImageState("ok")}
-                onError={() => setImageState("error")}
-                className="w-full max-h-[70vh] object-contain border border-[#00e639]/10 shadow-[0_4px_30px_rgba(0,0,0,0.8)] touch-manipulation select-auto"
+                onMutatedLoad={() => setImageState("ok")}
+                onMutatedError={() => setImageState("error")}
+                imgClassName="w-full max-h-[70vh] object-contain border border-[#00e639]/10 shadow-[0_4px_30px_rgba(0,0,0,0.8)] touch-manipulation select-auto"
               />
             </div>
 
@@ -346,13 +362,16 @@ export default function DetailsView({
             </div>
 
             <div className="bg-[#080808] p-4 flex items-center justify-center relative min-h-[350px] md:min-h-[500px]">
-              <img
-                src={image.url}
+              <CompareSlider
+                key={image.id}
+                ref={compareRef}
+                imageId={image.id}
+                mutatedUrl={image.url}
+                cleanUrl={cleanUrl}
                 alt={`Glitch Capture ${image.id}`}
-                referrerPolicy="no-referrer"
-                onLoad={() => setImageState("ok")}
-                onError={() => setImageState("error")}
-                className="w-full max-h-[560px] object-contain border border-[#00e639]/10 shadow-[0_4px_30px_rgba(0,0,0,0.8)]"
+                onMutatedLoad={() => setImageState("ok")}
+                onMutatedError={() => setImageState("error")}
+                imgClassName="w-full max-h-[560px] object-contain border border-[#00e639]/10 shadow-[0_4px_30px_rgba(0,0,0,0.8)]"
               />
             </div>
 
