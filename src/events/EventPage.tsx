@@ -76,13 +76,13 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
           <ArrowLeft size={13} /> [ ALL_EVENTS ]
         </a>
         <section className="mt-8 border border-matrix/25 bg-black/70 p-6 md:p-12 text-center shadow-[0_0_26px_rgba(0,255,65,.06)]">
-          <h1 className="flex flex-wrap items-end justify-center gap-3">
+          <h1 className="flex flex-col items-center gap-4">
             <img
               src={event.logoSrc}
               alt={event.name}
               className="h-auto w-full max-w-[min(680px,90vw)]"
             />
-            <span className="font-display text-4xl font-extrabold text-[#00ff41] md:text-6xl">
+            <span className="font-display text-4xl font-extrabold text-[#00ff41] md:text-6xl whitespace-nowrap">
               {event.year}
               <BlinkingCursor />
             </span>
