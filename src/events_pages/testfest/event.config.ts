@@ -17,7 +17,8 @@ export const testfest: EventConfig = {
   endDate: "2028-01-01",
   dateLabel: "forever test environment",
   status: "active",
-  description: "this is where the test captures go.",
+  description:
+    "This is where the test captures go. Every capture is either an update or a fix.",
   imageKitPath: `/booth_captures/${SLUG}/`,
   logoSrc: "/events_pages/testfest/testfest.png",
   instagramUrl: "https://www.instagram.com/gelerli/",

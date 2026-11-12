@@ -14,7 +14,7 @@ interface DetailsViewProps {
   event?: EventConfig;
 }
 
-// Formats authoritative ISO timestamp into UTC string with safety fallback
+// Formats authoritative ISO timestamp into Istanbul time (UTC+3) string with safety fallback
 function formatCaptureTimestamp(raw?: string | number): string {
   if (raw === undefined || raw === null || raw === "") {
     return "TIMESTAMP_UNAVAILABLE";
@@ -22,34 +22,29 @@ function formatCaptureTimestamp(raw?: string | number): string {
 
   let value: string | number = typeof raw === "string" ? raw.trim() : raw;
   // Safari/iOS can't parse "YYYY-MM-DD HH:MM:SS"; make it ISO-style.
-  if (typeof value === "string" && value.includes(" ") && !value.includes("T")) {
+  if (
+    typeof value === "string" &&
+    value.includes(" ") &&
+    !value.includes("T")
+  ) {
     value = value.replace(" ", "T");
   }
 
   const date = new Date(value);
   if (isNaN(date.getTime())) return "TIMESTAMP_UNAVAILABLE";
 
-  const months = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-  ];
-  const month = months[date.getUTCMonth()];
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  const hours = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
-  return `${month} ${day}, ${year} // ${hours}:${minutes}:${seconds} UTC`;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Istanbul",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("month").toUpperCase()} ${get("day")}, ${get("year")} // ${get("hour")}:${get("minute")}:${get("second")} UTC+3`;
 }
 
 export default function DetailsView({
