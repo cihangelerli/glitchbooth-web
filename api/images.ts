@@ -13,8 +13,8 @@ function timestampFromCaptureId(id: string): string | undefined {
 // under /booth_captures/ can never be enumerated.
 const ALLOWED_EVENT_SLUGS = new Set([
   "synthistan2026",
-  "watergardencaw2026",
   "testfest",
+  "watergardencaw2026",
 ]);
 
 const LIST_URL = "https://api.imagekit.io/v1/files";

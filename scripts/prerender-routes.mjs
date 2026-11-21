@@ -1,11 +1,13 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
 const SITE = "https://glitchbooth.online";
 const DIST = "dist";
+const EVENTS_DIR = "src/events_pages";
+const IMAGES_API_PATH = "api/images.ts";
 
-// KEEP IN SYNC with your routes and event slugs.
-const ROUTES = [
+// Static routes that are always prerendered
+const STATIC_ROUTES = [
   {
     path: "/archive",
     title: "Archive — GLITCH BOOTH",
@@ -16,22 +18,97 @@ const ROUTES = [
     title: "Event Directory — GLITCH BOOTH",
     description: "Events where the Glitch Booth has appeared.",
   },
-  {
-    path: "/synthistan2026",
-    title: "Synthistan 2026 — GLITCH BOOTH",
-    description: "Glitch Booth captures from Synthistan 2026.",
-  },
-  {
-    path: "/watergardencaw2026",
-    title: "Watergarden CAW 2026 — GLITCH BOOTH",
-    description: "Glitch Booth captures from Watergarden CAW 2026.",
-  },
-  {
-    path: "/testfest",
-    title: "TEST FEST — GLITCH BOOTH",
-    description: "Glitch Booth TEST captures.",
-  },
 ];
+
+function parseEventConfig(filePath) {
+  const content = readFileSync(filePath, "utf8");
+
+  // Extract slug: `const SLUG = "..."` or `slug: "..."`
+  let slug = null;
+  const slugConstMatch = content.match(/const\s+SLUG\s*=\s*["']([^"']+)["']/);
+  if (slugConstMatch) {
+    slug = slugConstMatch[1];
+  } else {
+    const slugPropMatch = content.match(/\bslug:\s*["']([^"']+)["']/);
+    if (slugPropMatch) slug = slugPropMatch[1];
+  }
+
+  if (!slug) return null;
+
+  // Extract title
+  const cardTitleMatch = content.match(/\bcardTitle:\s*["']([^"']+)["']/);
+  const nameMatch = content.match(/\bname:\s*["']([^"']+)["']/);
+  const rawTitle = cardTitleMatch ? cardTitleMatch[1] : (nameMatch ? nameMatch[1] : slug);
+  const title = `${rawTitle} — GLITCH BOOTH`;
+
+  // Extract description
+  let description = `Glitch Booth captures from ${rawTitle}.`;
+  const descMatch = content.match(/\bdescription:\s*(`[\s\S]*?`|"[\s\S]*?"|'[\s\S]*?')/);
+  if (descMatch) {
+    const rawDesc = descMatch[1].slice(1, -1).trim();
+    const firstPara = rawDesc.split(/\n\s*\n/)[0].replace(/\s+/g, " ");
+    if (firstPara.length > 0) {
+      description = firstPara.length > 160 ? `${firstPara.slice(0, 157)}...` : firstPara;
+    }
+  }
+
+  return { slug, title, description };
+}
+
+function discoverEvents() {
+  if (!existsSync(EVENTS_DIR)) return [];
+  const entries = readdirSync(EVENTS_DIR, { withFileTypes: true });
+  const events = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || entry.name.startsWith("_") || entry.name.startsWith(".")) {
+      continue;
+    }
+    const configPath = join(EVENTS_DIR, entry.name, "event.config.ts");
+    if (!existsSync(configPath)) continue;
+
+    const event = parseEventConfig(configPath);
+    if (event) {
+      events.push(event);
+    }
+  }
+
+  return events;
+}
+
+function syncApiImages(slugs) {
+  if (!existsSync(IMAGES_API_PATH)) return;
+
+  const currentContent = readFileSync(IMAGES_API_PATH, "utf8");
+  const sortedSlugs = [...new Set(slugs)].sort();
+  const slugsFormatted = sortedSlugs.map((s) => `  "${s}",`).join("\n");
+  const newSetBlock = `const ALLOWED_EVENT_SLUGS = new Set([\n${slugsFormatted}\n]);`;
+
+  const regex = /const\s+ALLOWED_EVENT_SLUGS\s*=\s*new\s+Set\(\[\s*[\s\S]*?\s*\]\);/;
+  if (!regex.test(currentContent)) {
+    console.warn("Could not find ALLOWED_EVENT_SLUGS pattern in api/images.ts");
+    return;
+  }
+
+  const updatedContent = currentContent.replace(regex, newSetBlock);
+  if (updatedContent !== currentContent) {
+    writeFileSync(IMAGES_API_PATH, updatedContent, "utf8");
+    console.log(`Updated api/images.ts with allowed slugs: ${sortedSlugs.join(", ")}`);
+  } else {
+    console.log("api/images.ts is already in sync with discovered events.");
+  }
+}
+
+const discoveredEvents = discoverEvents();
+syncApiImages(discoveredEvents.map((e) => e.slug));
+
+const eventRoutes = discoveredEvents.map((e) => ({
+  path: `/${e.slug}`,
+  title: e.title,
+  description: e.description,
+}));
+
+const ROUTES = [...STATIC_ROUTES, ...eventRoutes];
 
 const html = readFileSync(join(DIST, "index.html"), "utf8");
 const esc = (s) =>
