@@ -8,13 +8,14 @@ function timestampFromCaptureId(id: string): string | undefined {
   return new Date(ms).toISOString();
 }
 
-// Event folders this API is allowed to list. KEEP IN SYNC with the `slug` in each
-// events_pages/*/event.config.ts. Anything else gets a 404, so unpublished folders
-// under /booth_captures/ can never be enumerated.
-const ALLOWED_EVENT_SLUGS = new Set([
-  "synthistan2026",
-  "testfest",
-  "watergardencaw2026",
+// Event folders this API is allowed to list, with the name shown in posts.
+// KEEP IN SYNC with the `slug` in each events_pages/*/event.config.ts. Anything else
+// gets a 404, so unpublished folders under /booth_captures/ can never be enumerated.
+// To add an event: add one line here (slug, then display name).
+const ALLOWED_EVENTS = new Map<string, string>([
+  ["synthistan2026", "SYNTHISTAN 2026"],
+  ["testfest", "TEST FEST"],
+  ["watergardencaw2026", "WATERGARDEN COMICS & ARTS WEEKEND 2026"],
 ]);
 
 const LIST_URL = "https://api.imagekit.io/v1/files";
@@ -67,6 +68,14 @@ function toImages(files: any[]) {
 }
 
 export default async function handler(req: any, res: any) {
+  // Event list mode (?events=1): slugs and display names only, no ImageKit call.
+  if (firstValue(req.query?.events) !== undefined) {
+    res.setHeader("Cache-Control", CACHE_OK);
+    return res.status(200).json({
+      events: Array.from(ALLOWED_EVENTS, ([slug, name]) => ({ slug, name })),
+    });
+  }
+
   const privateKey = process.env.IMAGEKIT_PRIVATE_KEY;
   if (!privateKey) {
     console.error("IMAGEKIT_PRIVATE_KEY is missing");
@@ -74,7 +83,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const eventSlug = firstValue(req.query?.event)?.trim() || undefined;
-  if (eventSlug && !ALLOWED_EVENT_SLUGS.has(eventSlug)) {
+  if (eventSlug && !ALLOWED_EVENTS.has(eventSlug)) {
     return res.status(404).json({ error: "Unknown event" });
   }
 

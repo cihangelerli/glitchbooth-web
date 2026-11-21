@@ -35,14 +35,14 @@ function parseEventConfig(filePath) {
 
   if (!slug) return null;
 
-  // Extract title
+  // Extract display name: cardTitle wins, fallback to name, fallback to slug
   const cardTitleMatch = content.match(/\bcardTitle:\s*["']([^"']+)["']/);
   const nameMatch = content.match(/\bname:\s*["']([^"']+)["']/);
-  const rawTitle = cardTitleMatch ? cardTitleMatch[1] : (nameMatch ? nameMatch[1] : slug);
-  const title = `${rawTitle} — GLITCH BOOTH`;
+  const displayName = cardTitleMatch ? cardTitleMatch[1] : (nameMatch ? nameMatch[1] : slug);
+  const title = `${displayName} — GLITCH BOOTH`;
 
   // Extract description
-  let description = `Glitch Booth captures from ${rawTitle}.`;
+  let description = `Glitch Booth captures from ${displayName}.`;
   const descMatch = content.match(/\bdescription:\s*(`[\s\S]*?`|"[\s\S]*?"|'[\s\S]*?')/);
   if (descMatch) {
     const rawDesc = descMatch[1].slice(1, -1).trim();
@@ -52,7 +52,7 @@ function parseEventConfig(filePath) {
     }
   }
 
-  return { slug, title, description };
+  return { slug, displayName, title, description };
 }
 
 function discoverEvents() {
@@ -76,31 +76,35 @@ function discoverEvents() {
   return events;
 }
 
-function syncApiImages(slugs) {
+function syncApiImages(events) {
   if (!existsSync(IMAGES_API_PATH)) return;
 
   const currentContent = readFileSync(IMAGES_API_PATH, "utf8");
-  const sortedSlugs = [...new Set(slugs)].sort();
-  const slugsFormatted = sortedSlugs.map((s) => `  "${s}",`).join("\n");
-  const newSetBlock = `const ALLOWED_EVENT_SLUGS = new Set([\n${slugsFormatted}\n]);`;
+  // Sort events alphabetically by slug
+  const sortedEvents = [...events].sort((a, b) => a.slug.localeCompare(b.slug));
+  const entriesFormatted = sortedEvents
+    .map((e) => `  [${JSON.stringify(e.slug)}, ${JSON.stringify(e.displayName)}],`)
+    .join("\n");
+  const newMapBlock = `const ALLOWED_EVENTS = new Map<string, string>([\n${entriesFormatted}\n]);`;
 
-  const regex = /const\s+ALLOWED_EVENT_SLUGS\s*=\s*new\s+Set\(\[\s*[\s\S]*?\s*\]\);/;
+  // Matches either ALLOWED_EVENTS Map or legacy ALLOWED_EVENT_SLUGS Set
+  const regex = /const\s+(?:ALLOWED_EVENTS|ALLOWED_EVENT_SLUGS)\s*=\s*new\s+(?:Map(?:<string,\s*string>)?|Set)\(\[\s*[\s\S]*?\s*\]\);/;
   if (!regex.test(currentContent)) {
-    console.warn("Could not find ALLOWED_EVENT_SLUGS pattern in api/images.ts");
+    console.warn("Could not find ALLOWED_EVENTS pattern in api/images.ts");
     return;
   }
 
-  const updatedContent = currentContent.replace(regex, newSetBlock);
+  const updatedContent = currentContent.replace(regex, newMapBlock);
   if (updatedContent !== currentContent) {
     writeFileSync(IMAGES_API_PATH, updatedContent, "utf8");
-    console.log(`Updated api/images.ts with allowed slugs: ${sortedSlugs.join(", ")}`);
+    console.log(`Updated api/images.ts with events:\n${entriesFormatted}`);
   } else {
     console.log("api/images.ts is already in sync with discovered events.");
   }
 }
 
 const discoveredEvents = discoverEvents();
-syncApiImages(discoveredEvents.map((e) => e.slug));
+syncApiImages(discoveredEvents);
 
 const eventRoutes = discoveredEvents.map((e) => ({
   path: `/${e.slug}`,
