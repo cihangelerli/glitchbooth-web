@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import GlitchMarqueeRow from "./components/GlitchMarqueeRow";
@@ -17,6 +17,7 @@ import { getEventCaptureUrl } from "./events/eventCapture";
 import type { EventConfig } from "./events/types";
 import { timestampFromCaptureId } from "./utils/captureTime";
 import { applyPageMeta } from "./utils/pageMeta";
+import { lookupCapture } from "./utils/lookupCapture";
 
 type AppView =
   | "home"
@@ -85,6 +86,7 @@ export default function App() {
   const [imagesPool, setImagesPool] = useState<GalleryImage[]>([]);
   const [archiveImages, setArchiveImages] = useState<GalleryImage[] | null>(null);
   const [archiveHasMore, setArchiveHasMore] = useState(false);
+  const [archiveLoadingMore, setArchiveLoadingMore] = useState(false);
   const [hasMoreCaptures, setHasMoreCaptures] = useState(false);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -239,6 +241,26 @@ export default function App() {
     return () => window.removeEventListener("popstate", syncViewWithUrl);
   }, [imagesPool]);
 
+  // Deep links (QR scans) start with a guessed image address. If the capture
+  // was moved to another ImageKit folder, ask the server where it is now.
+  const lookedUpIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (currentView !== "details" && currentView !== "event-details") return;
+    const id = selectedImage?.id;
+    if (!id || lookedUpIds.current.has(id)) return;
+    if (imagesPool.some((img) => img.id === id)) return;
+    if (getImageFromHistoryState(id)) return;
+    lookedUpIds.current.add(id);
+    lookupCapture(id).then((found) => {
+      if (!found) return;
+      setSelectedImage((prev) =>
+        prev && prev.id === id && prev.url !== found.url
+          ? { ...prev, url: found.url, filename: found.filename ?? prev.filename }
+          : prev,
+      );
+    });
+  }, [currentView, selectedImage?.id, imagesPool]);
+
   const backgroundRows = useMemo(() => {
     const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES; // already shuffled
     const PER_ROW = 24;
@@ -279,23 +301,50 @@ export default function App() {
     }
   };
 
-  // Load the full list only when the archive is opened
+  // Archive loads in pages of 100 (the server's `nextSkip` is the offset for the
+  // next page). The first page loads when the archive opens; ArchiveView asks
+  // for more as the visitor scrolls.
+  const archiveSkip = useRef(0);
+  const archiveBusy = useRef(false);
+
+  const loadArchivePage = useCallback(async () => {
+    if (archiveBusy.current) return;
+    archiveBusy.current = true;
+    setArchiveLoadingMore(true);
+    try {
+      const response = await fetch(
+        `/api/images?skip=${archiveSkip.current}&limit=100`,
+      );
+      const payload = response.ok ? await response.json() : null;
+      if (!Array.isArray(payload?.images)) return;
+      if (payload.images.length === 0) {
+        setArchiveHasMore(false);
+        return;
+      }
+      archiveSkip.current =
+        typeof payload.nextSkip === "number"
+          ? payload.nextSkip
+          : archiveSkip.current + 100;
+      setArchiveImages((prev) => {
+        const known = new Set((prev ?? []).map((img) => img.id));
+        const fresh = payload.images.filter(
+          (img: GalleryImage) => !known.has(img.id),
+        );
+        return [...(prev ?? []), ...fresh];
+      });
+      setArchiveHasMore(payload.hasMore === true);
+    } catch {
+      // keep what is already loaded
+    } finally {
+      archiveBusy.current = false;
+      setArchiveLoadingMore(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (currentView !== "archive" || archiveImages !== null) return;
-    let cancelled = false;
-    fetch("/api/images")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((payload) => {
-        if (cancelled || !Array.isArray(payload?.images)) return;
-        if (payload.images.length === 0) return;
-        setArchiveImages(payload.images);
-        setArchiveHasMore(payload.hasMore === true);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [currentView, archiveImages]);
+    loadArchivePage();
+  }, [currentView, archiveImages, loadArchivePage]);
 
   useEffect(() => {
     switch (currentView) {
@@ -475,6 +524,8 @@ export default function App() {
                 onImageSelect={handleSelectImageAndInspect}
                 onBackToHome={handleViewHome}
                 onRandomize={handleRandomizeImages}
+                onLoadMore={loadArchivePage}
+                loadingMore={archiveLoadingMore}
               />
             )}
           </>

@@ -92,6 +92,57 @@ export default async function handler(req: any, res: any) {
     : "/booth_captures/";
   const base64Auth = Buffer.from(`${privateKey}:`).toString("base64");
 
+  // Lookup mode (?id=<id>): find ONE capture wherever it lives, so QR links keep
+  // working after files are moved between ImageKit folders. Only the old root
+  // folder and the allowed event folders are searched; anything else (including
+  // /booth_captures_clean/) is ignored.
+  const lookupId = firstValue(req.query?.id)?.trim();
+  if (lookupId !== undefined) {
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(lookupId)) {
+      return res.status(400).json({ error: "Bad id" });
+    }
+    try {
+      const query = new URLSearchParams({
+        type: "file",
+        searchQuery: `name = "${lookupId}_color.jpg" OR name = "${lookupId}.jpg"`,
+        limit: "20",
+      });
+      const response = await fetch(`${LIST_URL}?${query}`, {
+        headers: { Authorization: `Basic ${base64Auth}` },
+      });
+      if (!response.ok) {
+        throw new Error(`ImageKit responded with status ${response.status}`);
+      }
+      const found = await response.json();
+      const matches = (Array.isArray(found) ? found : []).filter(
+        (file: any) => {
+          if (!isCaptureFile(file) || typeof file.filePath !== "string")
+            return false;
+          const parts = file.filePath.split("/"); // ["", "booth_captures", ...folders, name]
+          if (parts[1] !== "booth_captures") return false;
+          return (
+            parts.length === 3 ||
+            (parts.length === 4 && ALLOWED_EVENTS.has(parts[2]))
+          );
+        },
+      );
+      // Prefer the mutated `_color.jpg` over a plain `<id>.jpg`.
+      const match =
+        matches.find((file: any) => file.name.endsWith("_color.jpg")) ??
+        matches[0];
+      if (!match) {
+        res.setHeader("Cache-Control", "public, s-maxage=30");
+        return res.status(404).json({ error: "Capture not found" });
+      }
+      res.setHeader("Cache-Control", CACHE_OK);
+      return res.status(200).json({ image: formatFile(match) });
+    } catch (error: any) {
+      console.error("images lookup failed:", error?.message);
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(502).json({ error: "Image lookup unavailable" });
+    }
+  }
+
   const fetchFiles = async (skip: number, limit: number): Promise<any[]> => {
     const query = new URLSearchParams({
       path: imageKitPath,

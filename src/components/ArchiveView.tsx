@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -17,6 +17,8 @@ interface ArchiveViewProps {
   onImageSelect: (img: GalleryImage) => void;
   onBackToHome: () => void;
   onRandomize: () => void;
+  onLoadMore: () => void;
+  loadingMore: boolean;
 }
 
 export default function ArchiveView({
@@ -25,6 +27,8 @@ export default function ArchiveView({
   onImageSelect,
   onBackToHome,
   onRandomize,
+  onLoadMore,
+  loadingMore,
 }: ArchiveViewProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
@@ -102,6 +106,34 @@ export default function ArchiveView({
   const visibleImages = sortedAndFilteredImages.slice(0, visibleCount);
 
   const isFiltering = searchQuery.trim().length > 0 || dateFilter !== "all";
+
+  // Search, date filters and non-default sorting only see what is loaded, so
+  // while one is active the rest of the archive is loaded in the background.
+  const needsEverything = isFiltering || sortBy !== "latest";
+  useEffect(() => {
+    if (needsEverything && hasMoreCaptures) onLoadMore();
+  }, [needsEverything, hasMoreCaptures, images.length, onLoadMore]);
+
+  // Infinite scroll: when the marker below the grid comes into view, show more
+  // cards, or fetch the next page from the server once every card is shown.
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return;
+        if (visibleCount < sortedAndFilteredImages.length) {
+          setVisibleCount((c) => c + PAGE_SIZE);
+        } else if (hasMoreCaptures) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visibleCount, sortedAndFilteredImages.length, hasMoreCaptures, onLoadMore]);
 
   const captureCountLabel = isFiltering
     ? `${sortedAndFilteredImages.length} MATCHES`
@@ -288,18 +320,25 @@ export default function ArchiveView({
             ))}
           </div>
 
-          {visibleCount < sortedAndFilteredImages.length && (
+          {(visibleCount < sortedAndFilteredImages.length || hasMoreCaptures) && (
             <div className="mt-8 text-center">
               <button
-                onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-                className="font-mono text-xs border border-[#00ff41] px-6 py-3 font-bold text-[#00ff41] hover:bg-[#00ff41] hover:text-black transition-all cursor-pointer"
+                onClick={() =>
+                  visibleCount < sortedAndFilteredImages.length
+                    ? setVisibleCount((c) => c + PAGE_SIZE)
+                    : onLoadMore()
+                }
+                disabled={loadingMore}
+                className="font-mono text-xs border border-[#00ff41] px-6 py-3 font-bold text-[#00ff41] hover:bg-[#00ff41] hover:text-black transition-all cursor-pointer disabled:opacity-50"
                 style={{ borderRadius: "0px" }}
               >
-                LOAD_MORE_CAPTURES [{visibleImages.length}/
-                {sortedAndFilteredImages.length}]
+                {loadingMore
+                  ? "LOADING_CAPTURES..."
+                  : `LOAD_MORE_CAPTURES [${visibleImages.length}/${sortedAndFilteredImages.length}${hasMoreCaptures ? "+" : ""}]`}
               </button>
             </div>
           )}
+          <div ref={sentinelRef} className="h-px" />
         </>
       )}
     </div>
