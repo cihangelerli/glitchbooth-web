@@ -77,15 +77,26 @@ export default function EventPage({ event, onImageSelect }: EventPageProps) {
         </a>
         <section className="mt-8 border border-matrix/25 bg-black/70 p-6 md:p-12 text-center shadow-[0_0_26px_rgba(0,255,65,.06)]">
           <h1 className="flex flex-col items-center gap-4">
-            <img
-              src={event.logoSrc}
-              alt={event.name}
-              className="h-auto w-full max-w-[min(680px,90vw)]"
-            />
-            <span className="font-display text-4xl font-extrabold text-[#00ff41] md:text-6xl whitespace-nowrap">
-              {event.year}
-              <BlinkingCursor />
-            </span>
+            {event.logoSrc ? (
+              <>
+                <img
+                  src={event.logoSrc}
+                  alt={event.name}
+                  className="h-auto w-full max-w-[min(680px,90vw)]"
+                />
+                <span className="font-display text-4xl font-extrabold text-[#00ff41] md:text-6xl whitespace-nowrap">
+                  {event.year}
+                  <BlinkingCursor />
+                </span>
+              </>
+            ) : (
+              <span className="font-display text-3xl font-extrabold text-[#00ff41] md:text-5xl break-words">
+                {event.name.includes(event.year)
+                  ? event.name
+                  : `${event.name} ${event.year}`}
+                <BlinkingCursor />
+              </span>
+            )}
           </h1>
           <p className="mx-auto mt-8 max-w-2xl whitespace-pre-line font-mono text-sm leading-relaxed text-[#d2dcd0] md:text-base">
             {event.description}

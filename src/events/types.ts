@@ -11,7 +11,7 @@ export interface EventConfig {
   status: EventStatus;
   description: string;
   imageKitPath: string;
-  logoSrc: string;
+  logoSrc?: string;
   instagramUrl?: string;
   instagramLabel?: string;
 }

@@ -63,17 +63,27 @@ export default function EventsPage() {
               className="group block border border-matrix/30 bg-black p-4 hover:border-[#00ff41] hover:shadow-[0_0_18px_rgba(0,255,65,.18)] transition-all relative"
             >
               <div className="aspect-[3/1] bg-[#061008] border border-matrix/10 flex items-center justify-center overflow-hidden p-3 relative">
-                <img
-                  src={event.logoSrc}
-                  alt={`${event.cardTitle} logo`}
-                  className="max-h-full max-w-full object-contain"
-                />
+                {event.logoSrc ? (
+                  <img
+                    src={event.logoSrc}
+                    alt={`${event.cardTitle} logo`}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                ) : (
+                  <p className="font-display text-center text-lg font-extrabold leading-tight text-[#00ff41] md:text-xl">
+                    {event.cardTitle}
+                  </p>
+                )}
               </div>
 
               <div className="mt-4 flex items-start justify-between gap-2">
-                <p className="font-display text-xl text-[#00ff41] leading-tight">
-                  {event.cardTitle}
-                </p>
+                {event.logoSrc ? (
+                  <p className="font-display text-xl text-[#00ff41] leading-tight">
+                    {event.cardTitle}
+                  </p>
+                ) : (
+                  <span />
+                )}
                 <span
                   className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-mono tracking-widest border border-solid shrink-0 ${status.badgeClass}`}
                 >
