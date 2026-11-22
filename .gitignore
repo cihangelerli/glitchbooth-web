@@ -12,6 +12,10 @@ coverage/
 .env.test.local
 .env.production.local
 
+#other
+moves.log
+move-captures.mjs
+
 # Added by code-review-graph
 AGENTS.md
 CLAUDE.md

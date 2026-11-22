@@ -312,27 +312,34 @@ export default function App() {
     archiveBusy.current = true;
     setArchiveLoadingMore(true);
     try {
-      const response = await fetch(
-        `/api/images?skip=${archiveSkip.current}&limit=100`,
-      );
-      const payload = response.ok ? await response.json() : null;
-      if (!Array.isArray(payload?.images)) return;
-      if (payload.images.length === 0) {
-        setArchiveHasMore(false);
+      // The server leaves out captures that belong to date-based events, so a
+      // page can come back empty while more pages remain: keep going.
+      for (let attempt = 0; attempt < 20; attempt++) {
+        const response = await fetch(
+          `/api/images?skip=${archiveSkip.current}&limit=100`,
+        );
+        const payload = response.ok ? await response.json() : null;
+        if (!Array.isArray(payload?.images)) return;
+        archiveSkip.current =
+          typeof payload.nextSkip === "number"
+            ? payload.nextSkip
+            : archiveSkip.current + 100;
+        const hasMore = payload.hasMore === true;
+        if (payload.images.length === 0) {
+          if (hasMore) continue;
+          setArchiveHasMore(false);
+          return;
+        }
+        setArchiveImages((prev) => {
+          const known = new Set((prev ?? []).map((img) => img.id));
+          const fresh = payload.images.filter(
+            (img: GalleryImage) => !known.has(img.id),
+          );
+          return [...(prev ?? []), ...fresh];
+        });
+        setArchiveHasMore(hasMore);
         return;
       }
-      archiveSkip.current =
-        typeof payload.nextSkip === "number"
-          ? payload.nextSkip
-          : archiveSkip.current + 100;
-      setArchiveImages((prev) => {
-        const known = new Set((prev ?? []).map((img) => img.id));
-        const fresh = payload.images.filter(
-          (img: GalleryImage) => !known.has(img.id),
-        );
-        return [...(prev ?? []), ...fresh];
-      });
-      setArchiveHasMore(payload.hasMore === true);
     } catch {
       // keep what is already loaded
     } finally {

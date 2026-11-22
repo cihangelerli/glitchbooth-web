@@ -13,18 +13,56 @@ function timestampFromCaptureId(id: string): string | undefined {
 // gets a 404, so unpublished folders under /booth_captures/ can never be enumerated.
 // To add an event: add one line here (slug, then display name).
 const ALLOWED_EVENTS = new Map<string, string>([
+  ["synthistan2026", "SYNTHISTAN 2026"],
+  ["watergardencaw2026", "WATERGARDEN COMICS & ARTS WEEKEND 2026"],
+  ["testfest", "TEST FEST"],
   ["gist2026", "GAMING ISTANBUL 2026"],
   ["icaf2026", "ISTANBUL COMICS AND ARTS FESTIVAL 2026"],
   ["icf2026", "12TH ISTANBUL COFFEE FESTIVAL 2026"],
-  ["synthistan2026", "SYNTHISTAN 2026"],
-  ["testfest", "TEST FEST"],
-  ["watergardencaw2026", "WATERGARDEN COMICS & ARTS WEEKEND 2026"],
 ]);
+
+// Old events whose captures were never moved into their own ImageKit folder
+// (ImageKit refused the move). Their captures stay in the root folder and are
+// picked by capture time instead. Dates are Istanbul days, both ends included.
+// These slugs must ALSO exist in ALLOWED_EVENTS above (the build keeps that one
+// in sync). Not touched by prerender-routes.mjs.
+const DATE_EVENTS = new Map<string, { from: string; to: string }>([
+  ["icaf2026", { from: "2026-06-13", to: "2026-06-14" }],
+  ["icf2026", { from: "2026-09-10", to: "2026-09-13" }],
+  ["gist2026", { from: "2026-09-18", to: "2026-09-20" }],
+]);
+
 
 const LIST_URL = "https://api.imagekit.io/v1/files";
 const PAGE_MAX = 100; // per page for events and the home first page
 const ALL_MAX = 1000; // ImageKit's per-request maximum
-const CACHE_OK = "public, s-maxage=30, stale-while-revalidate=120";
+const CACHE_OK = "public, s-maxage=60, stale-while-revalidate=120";
+// Date-based events are in the past, so their lists never change.
+const CACHE_FROZEN = "public, s-maxage=3600, stale-while-revalidate=86400";
+const DATE_EVENT_MEMORY_MS = 10 * 60 * 1000;
+
+const captureMs = (file: any): number => {
+  const id = String(file?.name ?? "").replace("_color.jpg", "").replace(".jpg", "");
+  return /^\d{13}$/.test(id) ? Number(id) : NaN;
+};
+
+const inRange = (ms: number, range: { from: string; to: string }) =>
+  ms >= Date.parse(`${range.from}T00:00:00.000+03:00`) &&
+  ms <= Date.parse(`${range.to}T23:59:59.999+03:00`);
+
+// Root listings leave out captures that belong to a date-based event, as if
+// they had been moved into that event's folder.
+const dropDateEventFiles = (files: any[]) =>
+  files.filter((file) => {
+    const ms = captureMs(file);
+    if (Number.isNaN(ms)) return true;
+    for (const range of DATE_EVENTS.values()) if (inRange(ms, range)) return false;
+    return true;
+  });
+
+// Kept in memory while the server instance stays warm, so "load more" on an
+// event page does not list ImageKit again.
+const dateEventMemory = new Map<string, { at: number; files: any[] }>();
 
 const firstValue = (value: unknown): string | undefined => {
   const v = Array.isArray(value) ? value[0] : value;
@@ -117,22 +155,15 @@ export default async function handler(req: any, res: any) {
         throw new Error(`ImageKit responded with status ${response.status}`);
       }
       const found = await response.json();
-      const matches = (Array.isArray(found) ? found : []).filter(
-        (file: any) => {
-          if (!isCaptureFile(file) || typeof file.filePath !== "string")
-            return false;
-          const parts = file.filePath.split("/"); // ["", "booth_captures", ...folders, name]
-          if (parts[1] !== "booth_captures") return false;
-          return (
-            parts.length === 3 ||
-            (parts.length === 4 && ALLOWED_EVENTS.has(parts[2]))
-          );
-        },
-      );
+      const matches = (Array.isArray(found) ? found : []).filter((file: any) => {
+        if (!isCaptureFile(file) || typeof file.filePath !== "string") return false;
+        const parts = file.filePath.split("/"); // ["", "booth_captures", ...folders, name]
+        if (parts[1] !== "booth_captures") return false;
+        return parts.length === 3 || (parts.length === 4 && ALLOWED_EVENTS.has(parts[2]));
+      });
       // Prefer the mutated `_color.jpg` over a plain `<id>.jpg`.
       const match =
-        matches.find((file: any) => file.name.endsWith("_color.jpg")) ??
-        matches[0];
+        matches.find((file: any) => file.name.endsWith("_color.jpg")) ?? matches[0];
       if (!match) {
         res.setHeader("Cache-Control", "public, s-maxage=30");
         return res.status(404).json({ error: "Capture not found" });
@@ -165,6 +196,73 @@ export default async function handler(req: any, res: any) {
   };
 
   try {
+    // Date-based event: its captures live in the root folder, picked by capture time.
+    const dateRange = eventSlug ? DATE_EVENTS.get(eventSlug) : undefined;
+    if (eventSlug && dateRange) {
+      let files: any[];
+      const remembered = dateEventMemory.get(eventSlug);
+      if (remembered && Date.now() - remembered.at < DATE_EVENT_MEMORY_MS) {
+        files = remembered.files;
+      } else {
+        const listAll = async (path: string) => {
+          const all: any[] = [];
+          for (let skip = 0; ; skip += ALL_MAX) {
+            const query = new URLSearchParams({
+              path,
+              type: "file",
+              sort: "DESC_CREATED",
+              skip: String(skip),
+              limit: String(ALL_MAX),
+            });
+            const response = await fetch(`${LIST_URL}?${query}`, {
+              headers: { Authorization: `Basic ${base64Auth}` },
+            });
+            if (!response.ok) {
+              throw new Error(`ImageKit responded with status ${response.status}`);
+            }
+            const batch = await response.json();
+            const rows = Array.isArray(batch) ? batch : [];
+            all.push(...rows);
+            if (rows.length < ALL_MAX) break;
+          }
+          return all;
+        };
+        const rootFiles = await listAll("/booth_captures/");
+        const ownFolderFiles = await listAll(`/booth_captures/${eventSlug}/`);
+        files = [
+          ...rootFiles.filter((file) => {
+            const ms = captureMs(file);
+            return !Number.isNaN(ms) && inRange(ms, dateRange);
+          }),
+          ...ownFolderFiles,
+        ];
+        dateEventMemory.set(eventSlug, { at: Date.now(), files });
+      }
+
+      const images = toImages(files);
+      const pagedRequest =
+        parseCount(firstValue(req.query?.skip)) !== undefined ||
+        parseCount(firstValue(req.query?.limit)) !== undefined;
+      res.setHeader("Cache-Control", CACHE_FROZEN);
+      if (!pagedRequest) {
+        return res.status(200).json({
+          images: images.slice(0, ALL_MAX),
+          hasMore: images.length > ALL_MAX,
+        });
+      }
+      const skip = parseCount(firstValue(req.query?.skip)) ?? 0;
+      const limit = Math.min(
+        Math.max(parseCount(firstValue(req.query?.limit)) ?? PAGE_MAX, 1),
+        PAGE_MAX,
+      );
+      const page = images.slice(skip, skip + limit);
+      return res.status(200).json({
+        images: page,
+        hasMore: skip + limit < images.length,
+        nextSkip: skip + page.length,
+      });
+    }
+
     const rawSkip = parseCount(firstValue(req.query?.skip));
     const rawLimit = parseCount(firstValue(req.query?.limit));
 
@@ -178,7 +276,7 @@ export default async function handler(req: any, res: any) {
 
       res.setHeader("Cache-Control", CACHE_OK);
       return res.status(200).json({
-        images: toImages(pageFiles),
+        images: toImages(eventSlug ? pageFiles : dropDateEventFiles(pageFiles)),
         hasMore: files.length > limit,
         nextSkip: skip + pageFiles.length, // raw upstream offset, not displayed count
       });
@@ -188,7 +286,7 @@ export default async function handler(req: any, res: any) {
     const files = await fetchFiles(0, ALL_MAX);
     res.setHeader("Cache-Control", CACHE_OK);
     return res.status(200).json({
-      images: toImages(files),
+      images: toImages(eventSlug ? files : dropDateEventFiles(files)),
       hasMore: files.length === ALL_MAX,
     });
   } catch (error: any) {
