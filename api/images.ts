@@ -13,12 +13,12 @@ function timestampFromCaptureId(id: string): string | undefined {
 // gets a 404, so unpublished folders under /booth_captures/ can never be enumerated.
 // To add an event: add one line here (slug, then display name).
 const ALLOWED_EVENTS = new Map<string, string>([
-  ["synthistan2026", "SYNTHISTAN 2026"],
-  ["watergardencaw2026", "WATERGARDEN COMICS & ARTS WEEKEND 2026"],
-  ["testfest", "TEST FEST"],
   ["gist2026", "GAMING ISTANBUL 2026"],
   ["icaf2026", "ISTANBUL COMICS AND ARTS FESTIVAL 2026"],
   ["icf2026", "12TH ISTANBUL COFFEE FESTIVAL 2026"],
+  ["synthistan2026", "SYNTHISTAN 2026"],
+  ["testfest", "TEST FEST"],
+  ["watergardencaw2026", "WATERGARDEN COMICS & ARTS WEEKEND 2026"],
 ]);
 
 // Old events whose captures were never moved into their own ImageKit folder
