@@ -271,14 +271,27 @@ export default async function handler(req: any, res: any) {
     if (rawSkip !== undefined || rawLimit !== undefined) {
       const skip = rawSkip ?? 0;
       const limit = Math.min(Math.max(rawLimit ?? PAGE_MAX, 1), PAGE_MAX);
-      const files = await fetchFiles(skip, limit + 1);
-      const pageFiles = files.slice(0, limit);
+
+      // Root listings leave out date-based event captures, so a raw page can be
+      // short or even empty. Keep reading raw pages until the page is full (or
+      // ImageKit runs out), so the site never receives an empty page while
+      // more captures exist.
+      const kept: any[] = [];
+      let cursor = skip; // raw upstream offset, not displayed count
+      let hasMore = true;
+      for (let round = 0; round < 10 && kept.length < limit && hasMore; round++) {
+        const files = await fetchFiles(cursor, limit + 1);
+        const pageFiles = files.slice(0, limit);
+        cursor += pageFiles.length;
+        hasMore = files.length > limit;
+        kept.push(...(eventSlug ? pageFiles : dropDateEventFiles(pageFiles)));
+      }
 
       res.setHeader("Cache-Control", CACHE_OK);
       return res.status(200).json({
-        images: toImages(eventSlug ? pageFiles : dropDateEventFiles(pageFiles)),
-        hasMore: files.length > limit,
-        nextSkip: skip + pageFiles.length, // raw upstream offset, not displayed count
+        images: toImages(kept),
+        hasMore,
+        nextSkip: cursor,
       });
     }
 

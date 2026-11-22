@@ -19,6 +19,12 @@ import { timestampFromCaptureId } from "./utils/captureTime";
 import { applyPageMeta } from "./utils/pageMeta";
 import { lookupCapture } from "./utils/lookupCapture";
 
+// Stock photos exist only for local `npm run dev` (where /api is not served).
+// Vite turns import.meta.env.DEV into false in a production build, so this
+// returns an empty list there and the stock images are left out of the bundle.
+const devStock = (): GalleryImage[] =>
+  import.meta.env.DEV ? STOCK_GALLERY_IMAGES : [];
+
 type AppView =
   | "home"
   | "archive"
@@ -158,16 +164,13 @@ export default function App() {
           : null;
 
         const liveImages = Array.isArray(payload?.images) ? payload.images : [];
-        const pool = liveImages.length > 0 ? liveImages : STOCK_GALLERY_IMAGES;
+        const pool = liveImages.length > 0 ? liveImages : devStock();
 
         setImagesPool(shuffleArray(pool));
         setHasMoreCaptures(liveImages.length > 0 && payload?.hasMore === true);
       } catch (err) {
-        console.error(
-          "ImageKit sync failed, falling back to stock assets:",
-          err,
-        );
-        setImagesPool(shuffleArray(STOCK_GALLERY_IMAGES));
+        console.error("ImageKit sync failed:", err);
+        setImagesPool(shuffleArray(devStock()));
         setHasMoreCaptures(false);
       } finally {
         setLoading(false);
@@ -262,7 +265,8 @@ export default function App() {
   }, [currentView, selectedImage?.id, imagesPool]);
 
   const backgroundRows = useMemo(() => {
-    const base = imagesPool.length ? imagesPool : STOCK_GALLERY_IMAGES; // already shuffled
+    const base = imagesPool.length ? imagesPool : devStock(); // already shuffled
+    if (base.length === 0) return { row1: [], row2: [], row3: [], row4: [] };
     const PER_ROW = 24;
     const slice = (row: number) =>
       Array.from(
@@ -454,6 +458,17 @@ export default function App() {
               <span className="w-2 h-2 bg-[#00ff41] rounded-full" />
               <span>CONNECTING_TO_GLITCH_BOOTH_STORAGE...</span>
             </div>
+          </div>
+        ) : imagesPool.length === 0 && currentView === "home" ? (
+          <div className="w-full h-[70vh] flex flex-col items-center justify-center gap-4 font-mono text-xs tracking-widest">
+            <span className="text-[#ffabf3]">[ STORAGE_OFFLINE ]</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="border border-[#00ff41] px-5 py-2 font-bold text-[#00ff41] hover:bg-[#00ff41] hover:text-black transition-all"
+              style={{ borderRadius: "0px" }}
+            >
+              RETRY_CONNECTION
+            </button>
           </div>
         ) : (
           <>
