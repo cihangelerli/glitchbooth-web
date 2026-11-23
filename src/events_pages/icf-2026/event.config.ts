@@ -17,7 +17,7 @@ export const newEvent: EventConfig = {
   endDate: "2026-09-13",
   dateLabel: "September 10-13",
   status: "past",
-  description: "12TH ISTANBUL COFFEE FESTIVAL 2026",
+  description: "Captures from 12TH ISTANBUL COFFEE FESTIVAL 2026",
   imageKitPath: `/booth_captures/${SLUG}/`,
   instagramUrl: "https://www.instagram.com/istanbulcoffeefestival/",
   instagramLabel: "FOLLOW ISTANBUL COFFEE FESTIVAL",

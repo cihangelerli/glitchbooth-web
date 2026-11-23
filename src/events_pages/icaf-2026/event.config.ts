@@ -17,7 +17,7 @@ export const newEvent: EventConfig = {
   endDate: "2026-06-14",
   dateLabel: "June 13 - 14",
   status: "past",
-  description: "ISTANBUL COMICS AND ARTS FESTIVAL 2026",
+  description: "Captures from ISTANBUL COMICS AND ARTS FESTIVAL 2026",
   imageKitPath: `/booth_captures/${SLUG}/`,
   instagramUrl: "https://www.instagram.com/istcaf/",
   instagramLabel: "FOLLOW ICAF",

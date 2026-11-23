@@ -17,7 +17,7 @@ export const newEvent: EventConfig = {
   endDate: "2026-09-20",
   dateLabel: "September 18-20",
   status: "past",
-  description: "GAMING ISTANBUL 2026",
+  description: "Captures from GAMING ISTANBUL 2026",
   imageKitPath: `/booth_captures/${SLUG}/`,
   instagramUrl: "https://www.instagram.com/gamingistanbul/",
   instagramLabel: "FOLLOW GAMING ISTANBUL",
